@@ -1,0 +1,652 @@
+#:kivy 2.2.0
+
+WindowManager:
+    LectureScreen:
+    CourseSelectScreen:
+
+# WindowManager:
+#     CourseSelectScreen:
+#     LectureScreen:
+<MDDatePicker>:
+    primary_color: 0, 84/255, 81/255
+    radius: [sp(10), sp(10), sp(10), sp(10)]
+
+<LoadingLayout>:
+    canvas.before:
+        Color:
+            rgba: 32/255, 36/255, 41/255, 0.9
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    info: info
+    BoxLayout:
+        orientation: "vertical"
+        size_hint: None, None
+        size: self.minimum_width, self.minimum_height
+        pos_hint: {'center_x':0.5, 'center_y':0.5}
+        
+        Image:
+            source: 'images/cat.png'
+            opacity: 0.5
+            center: self.parent.center
+            size_hint: None, None
+            size: "200sp", "200sp"
+            # anim_delay: 0
+
+        TextInput:
+            id: info
+            pos_hint: {'center_x':0.5, 'center_y':0.5}
+            readonly: True 
+            multiline: 1
+            opacity: 0.7
+            size_hint_y: None
+            background_color: 0,0,0,0
+            foreground_color: 1, 1, 1, 1
+
+            background_disabled_normal: ""
+
+            halign: "center"
+
+<MenuLayout>:
+    canvas.before:
+        Color:
+            rgba: 32/255, 36/255, 41/255, 0.6
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    # BoxLayout:
+    #     orientation: "vertical"
+    #     size_hint: None, None
+    ScrollView:
+        do_scroll_x: 0
+        always_overscroll: 0
+        size_hint: None, None
+        size: root.width - sp(60), root.height - sp(30)
+        pos: sp(45), sp(15)
+        halign: "right"
+        canvas.before:
+            Color:
+                rgba: 32/255, 36/255, 41/255, 1
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [sp(10)]
+        GridLayout:
+
+            id: menu_items
+            cols: 1
+            size_hint_y: None
+            height: self.minimum_height
+
+<MenuItem>:
+    orientation: "horizontal"
+    padding: "5sp", "5sp", "5sp", "0sp"
+    size_hint_y: None
+    height: "50sp"
+
+    Button:
+        id: btn
+        background_color: 0,0,0,0
+        text_size: self.width - sp(50), self.height
+        halign: "right"
+        valign: "center"
+        color: .6, .6, .6, 1
+        canvas.before:
+            Color:
+                rgba: (.1, .1, .1, 1) if self.state=='normal' else (32/255, 36/255, 41/255, 1)
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [sp(10)]
+
+        # Image:
+        #     source: 'images/menu-2.png'
+        #     y: self.parent.y + self.parent.height - 200
+        #     x: self.parent.x
+
+        
+
+<LectureScreen>:
+    name: "lectures"
+    lecture_list: lecture_list
+    day: day
+    
+    canvas.before:
+        Color:
+            rgba: 32/255, 36/255, 41/255, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    BoxLayout:
+        orientation: "vertical"
+        size: root.width, root.height
+
+        BoxLayout:
+            size_hint_y: None
+            size: self.width, self.minimum_height
+            orientation: "horizontal"
+            padding: "5sp", "5sp", "5sp", "0sp"
+            BoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: self.minimum_height
+
+                canvas.before:
+                    Color:
+                        rgba: .1, .1, .1, 1
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [sp(10)]
+
+                BoxLayout:
+                    orientation: "vertical"
+                    padding: "10sp", "5sp"
+                    
+                    Label:
+                        id: program
+                        halign: "left"
+                        size_hint_x: None
+                        size: self.texture_size
+                        opacity: 0.8
+                    Label:
+                        id: semester
+                        halign: "left"
+                        font_size: "12sp"
+                        size_hint_x: None
+                        size: self.texture_size
+                        opacity: 0.8
+
+                MenuButton:
+                    opacity: 0.8
+                    canvas.before:
+                        Color:
+                            rgb: (1,1,1)
+                        Rectangle:
+                            source: "images/menu-2.png"
+                            size: self.width, self.height
+                            pos: self.pos
+                    on_release: root.open_menu()
+
+        BoxLayout:
+            orientation: "vertical"
+            padding: "6sp", "7sp", "6sp", "0sp"
+
+            BoxLayout:
+                size: root.width, root.height
+                
+
+                canvas.before:
+                    Color:
+                        rgba: (.1,.1,.1,1)
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+
+                orientation: "vertical"
+                padding: "10sp"
+                spacing: "10sp"
+
+                BoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y : None
+                    height: self.minimum_height
+
+                    RoundedBoxButton:
+                        opacity: 0.7
+                        text: "<"
+                        on_release: root.minus_day()
+
+                    BoxLayout:
+                        orientation: "horizontal"
+                        spacing: "5sp"
+
+                        BoxLayout:
+                            orientation: "horizontal"
+
+                        # AnchorLayout:
+                        #     anchor_x: "center"
+                        #     orientation: "horizontal"
+                                
+                        RoundedBoxButton:
+                            opacity: 0.7
+                            id: day
+                            text: "DATE: NONE"
+                            size_hint_x: None
+                            width: self.texture_size[0] + sp(50)
+                            font_size: "16sp"
+                            on_release:
+                                # root.reset_day()
+                                root.date_select()
+
+                        RoundedBoxButton:
+                            opacity: 0.2 if root.current_day else 0.7
+                            disabled: root.current_day
+                            canvas.before:
+                                Color:
+                                    rgb: (1,1,1)
+                                Rectangle:
+                                    source: "images/home-2.png"
+                                    size: self.width, self.height
+                                    pos: self.pos
+                            on_release:
+                                root.reset_day()
+
+                        BoxLayout:
+                            orientation: "horizontal"
+
+
+                    RoundedBoxButton:
+                        opacity: 0.7
+                        text: ">"
+                        on_release: root.plus_day()
+
+                ScrollView:
+                    do_scroll_x: 0
+                    always_overscroll: 0
+                    on_touch_move:
+                        root.touched_moved(*args)
+                    on_touch_up:
+                        root.touched_up()
+                    GridLayout:
+                        id: lecture_list
+                        cols: 1
+                        size_hint_y: None
+                        height: self.minimum_height
+                        spacing: "5sp"
+
+        BoxLayout:
+            size_hint_y: None
+            height: self.minimum_height
+            orientation: "horizontal"
+            padding: "5sp", "7sp", "5sp", "5sp"
+
+            BoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: self.minimum_height
+
+                canvas.before:
+                    Color:
+                        rgba: (.1,.1,.1,1)
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [sp(10)]
+
+                BoxLayout:
+                    orientation: "vertical"
+                    padding: "10sp", "5sp"
+
+                    Label:
+                        id: last_update
+                        halign: "left"
+                        size_hint_x: None
+                        size: self.texture_size
+                        opacity: 0.7
+
+                MenuButton:
+                    opacity: 0.7
+                    canvas.before:
+                        Color:
+                            rgb: (1,1,1)
+                        Rectangle:
+                            source: "images/refresh-2.png"
+                            size: self.width, self.height
+                            pos: self.pos
+                    on_release: root.scrap_lectures()
+
+<CourseSelectScreen>:
+    name: "courses"
+    canvas.before:
+        Color:
+            rgba: 32/255, 36/255, 41/255, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    BoxLayout:
+        orientation: "vertical"
+        size: root.width, root.height
+
+        BoxLayout:
+            size_hint_y: None
+            size: self.width, self.minimum_height
+            orientation: "horizontal"
+            padding: "5sp", "5sp", "5sp", "0sp"
+
+            BoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: self.minimum_height
+
+                canvas.before:
+                    Color:
+                        rgba: .1, .1, .1, 1
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [sp(10)]
+
+                MenuButton:
+                    canvas.before:
+                        Color:
+                            rgb: (1,1,1)
+                        Rectangle:
+                            source: "images/refresh-2.png"
+                            size: self.width, self.height
+                            pos: self.pos
+                    on_release: root.refresh()
+
+                Label:
+                    text: "NORTUS"
+                    font_size: "16sp"
+
+                MenuButton:
+                    id: to_lectures_btn
+                    canvas.before:
+                        Color:
+                            rgb: (1,1,1)
+                        Rectangle:
+                            source: "images/right-arrow-2.png"
+                            size: self.width, self.height
+                            pos: self.pos
+                    on_release:
+                        root.screen_to_lectures()
+
+        BoxLayout:
+            orientation: "vertical"
+            spacing: "5sp"
+            padding: "5sp", "5sp", "5sp", "5sp"
+
+            canvas.before:
+                Color:
+                    rgba: (0, 0, 0, 0)
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+            GridLayout:
+                cols: 1
+                spacing: "10sp"
+                padding: "10sp", "10sp"
+
+                canvas.before:
+                    Color:
+                        rgba: (.1,.1,.1,1)
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+
+                SpinBox:
+                    SideLabel:
+                        text: "Semester:"
+                    CSpinner:
+                        id: semester_spin
+                        text_autoupdate: True
+                        on_text: root.selected_semester(semester_spin.text)
+
+                SpinBox:
+                    SideLabel:
+                        text: "Course:"
+                    CSpinner:
+                        id: courses_spin
+                        disabled: True if semester_spin.text == "" else False
+                        on_text: root.selected_course(courses_spin.text)
+
+                SpinBox:
+                    SideLabel:
+                        text: "Program:"
+                    CSpinner:
+                        id: program_spin
+                        disabled: True if courses_spin.text == "" else False
+                        on_text: root.selected_program(program_spin.text)
+
+                SpinBox:
+                    SideLabel:
+                        text: "Course num.:"
+                    CSpinner:
+                        id: course_num_spin
+                        disabled: True if program_spin.text == "" else False
+                        on_text: root.selected_course_num(course_num_spin.text)
+
+                SpinBox:
+                    SideLabel:
+                        text: "Group:"
+                    CSpinner:
+                        id: group_spin
+                        disabled: True if course_num_spin.text == "" else False
+                        on_text: root.selected_group(group_spin.text)
+
+                BoxLayout:
+                    orientation: "vertical"
+
+                RoundedButton:
+                    text: "SAVE"
+                    disabled: True if group_spin.text == "" else False
+                    
+                    on_release:
+                        root.save()
+
+<LectureElement>:
+    orientation: "vertical"
+    size_hint_y: None
+    height: self.minimum_height + sp(50)
+    padding: "10sp", "5sp"
+
+    name: name
+    room: room
+    time: time
+
+    canvas.before:
+        Color:
+            rgba: self.border_color
+        RoundedRectangle:
+            radius: [sp(10)]
+            size: self.size
+            pos: self.pos
+        Color:
+            rgba: 42/255, 47/255, 53/255, 1
+        RoundedRectangle:
+            size: self.width - sp(6), self.height - sp(6)
+            pos: self.x + sp(3), self.y + sp(3)
+            radius: [sp(10)]
+
+    TextInput:
+        id: name
+        readonly: True
+        multiline: 1
+        size_hint_y: None
+        height: self.minimum_height
+        font_size: "16sp"
+        background_color: 0,0,0,0
+        foreground_color: 1, 1, 1, 1
+        background_disabled_normal: ""
+        halign: "center"
+        padding: "5sp", "10sp", "5sp", "0sp"
+
+    BoxLayout:
+        orientation: "horizontal"
+        padding: "0sp"
+        Label:
+            id: room
+            color: (.6,.6,.6,1)
+
+        Label:
+            id: time
+            color: (.6,.6,.6,1)
+
+<LectureElementBtn>:
+    orientation: "vertical"
+    size_hint_y: None
+    height: self.minimum_height + sp(50)
+    padding: "10sp", "5sp"
+
+    name: name
+    room: room
+    time: time
+
+    canvas.before:
+        Color:
+            rgba: self.border_color
+        RoundedRectangle:
+            radius: [sp(10)]
+            size: self.size
+            pos: self.pos
+        Color:
+            rgba: 42/255, 47/255, 53/255, 1
+        RoundedRectangle:
+            size: self.width - sp(6), self.height - sp(6)
+            pos: self.x + sp(3), self.y + sp(3)
+            radius: [sp(10)]
+
+    AnchorLayout:
+        anchor_x: "center"
+        size_hint_y: None
+        RoundedBoxButton:
+            id: name
+            size_hint: None, None
+            width: self.texture_size[0] + sp(50)
+            height: self.texture_size[1] + sp(50)
+            font_size: "16sp"
+            background_color: 0,0,0,0
+            foreground_color: 1, 1, 1, 1
+
+    BoxLayout:
+        orientation: "horizontal"
+        padding: "0sp"
+        Label:
+            id: room
+            color: (.6,.6,.6,1)
+
+        Label:
+            id: time
+            color: (.6,.6,.6,1)
+
+<SpinBox@BoxLayout>:
+    orientation: "vertical"
+    padding: "10sp", "10sp"
+    size_hint_y: None
+    height: self.minimum_height + sp(60)
+    canvas.before:
+        Color:
+            rgba: 42/255, 47/255, 53/255, 1
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [sp(10)]
+
+
+<RoundedBoxButton@Button>:
+    background_color: 0,0,0,0
+    size: "40sp", "40sp"
+    size_hint: None, None
+    
+    canvas.before:
+        Color:
+            rgba: (32/255, 36/255, 41/255, 1) if self.state=='normal' else (.1, .1, .1, 1)
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [sp(10)]
+
+<RoundedButton@Button>:
+    background_color: 0,0,0,0
+    size_hint_y: None
+    height: "50sp"
+    
+    canvas.before:
+        Color:
+            rgba: (32/255, 36/255, 41/255, 1) if self.state=='normal' else (.1, .1, .1, 1)
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [sp(10)]
+
+<RoundedLabel>:
+    background_color: 0,0,0,0
+    size_hint_y: None
+    height: "40sp"
+    # color: .6, .6, .6
+    opacity: 0.5
+    
+    canvas.before:
+        Color:
+            rgba: (32/255, 36/255, 41/255, 1)
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [sp(10)]
+
+# <MenuBar@BoxLayout>:
+#     size_hint: 1, None
+#     size: self.width, "50sp"
+#     orientation: "horizontal"
+#     canvas.before:
+#         Color:
+#             rgba: (.1,.1,.1,1)
+#         RoundedRectangle:
+#             pos: self.pos
+#             size: self.size
+#             radius: [0, 0, 10, 10]
+
+<MenuButton@Button>:
+    background_color: 0,0,0,0
+    size: "50sp", "50sp"
+    size_hint: None, None
+    
+    canvas.before:
+        Color:
+            rgba: (0, 0, 0, 0) if self.state=='normal' else (42/255, 47/255, 53/255, 1)
+        RoundedRectangle:
+            pos: self.pos[0] + sp(3), self.pos[1] + sp(3)
+            size: self.size[0] - sp(6), self.size[1] - sp(6)
+            radius: [sp(10)]
+
+<CSpinner@Spinner>:
+    background_normal: ''
+    background_color: .2, .2, .2, 0
+    size_hint_y: 2.5
+    # size_hint_y: None
+    # height: sp(10)
+    canvas.before:
+        Color:
+            rgba: (32/255, 36/255, 41/255, 1) if self.state=='normal' else (.1, .1, .1, 1)
+        RoundedRectangle:
+            pos: self.pos[0] + sp(3), self.pos[1] + sp(3)
+            size: self.size[0] - sp(6), self.size[1] - sp(6)
+            radius: [sp(7)]
+
+<SpinnerOption>:
+    background_color: 0, 0, 0, 0
+    canvas.before:
+        Color:
+            rgba: 32/255, 36/255, 41/255, 0.8
+        Rectangle:
+            pos: self.pos
+            size: self.size
+        Color:
+            rgba: (.1, .1, .1, 1)
+        RoundedRectangle:
+            pos: self.pos[0] + sp(3), self.pos[1] + sp(3)
+            size: self.size[0] - sp(6), self.size[1] - sp(6)
+            radius: [sp(7)]
+
+        # Color:
+        #     rgba: (32/255, 36/255, 41/255, 1) if self.state=='normal' else (.1, .1, .1, 1)
+        # RoundedRectangle:
+        #     pos: self.pos[0] + sp(6), self.pos[1] + sp(6)
+        #     size: self.size[0] - sp(12), self.size[1] - sp(12)
+        #     radius: [sp(7)]
+
+
+<SideLabel@Label>:
+    # text: "Semester:"
+    padding: "15sp", "0sp", "0sp", "5sp"
+    color: (.6,.6,.6,1)
+    size_hint_x: None
+    # halign: "left"
+    size: self.texture_size
