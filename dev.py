@@ -11,7 +11,9 @@ DEVICE = "R58RA2H4D4H"
 COPY = (
     "main.py",
     "style.kv",
-    "icon.png",
+    ["build_files", "icon.png"],
+    ["build_files", "buildozer.spec"],
+    ["build_files", "presplash.png"],
     "nortus",
     "images"
 )
@@ -49,8 +51,12 @@ class App:
 
     def copy_to_ubuntu(self):
         for _file in COPY:
-            if os.path.splitext(_file)[1]:
-                shutil.copyfile(_file, os.path.join(PATH, _file))
+            if type(_file) is list or os.path.splitext(_file)[1]:
+                if type(_file) is list:
+                    shutil.copyfile(os.path.join(*_file), os.path.join(PATH, _file[1]))
+                else:
+                    shutil.copyfile(_file, os.path.join(PATH, _file))
+
                 print(f"Copied: {_file}")
                 continue
             for data in os.listdir(_file):
