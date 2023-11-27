@@ -1,150 +1,71 @@
 from kivy.uix.boxlayout import BoxLayout
-# from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
+from kivy.uix.spinner import Spinner
 from kivy.uix.relativelayout import RelativeLayout
-# from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.screenmanager import Screen, ScreenManager
+from kivy.uix.scrollview import ScrollView
+
+# from kivymd.uix.pickers import MDDatePicker
+
 from kivy.properties import ObjectProperty, BooleanProperty, ListProperty
 from kivy.clock import Clock
 from kivy.metrics import sp
 from kivy.core.clipboard import Clipboard
-# from kivy.core.window import Window
-from kivymd.uix.pickers import MDDatePicker
 
 import datetime as dt
+import calendar
 import functools as ft
 import threading as td
 import bs4
 import webbrowser
 
+from itertools import zip_longest
 from . import configm, lecturesm, scrap_lectures, req_post, req_get, limit_text_size, DT_FORMAT, DAYS, scrap_subjects
+
+
+
+# Atslēdz swipe tad kad logs ir disabled (LectureScreen)
+
+
 
 CURRENT_LECTURE_BD = [127/255, 200/255, 84/255, 1]
 NEXT_LECTURE_BD = [200/255, 154/255, 84/255, 1]
 
-# class LectureList(GridLayout):
-#     def yes(self, touch):
-#         self.enable_touch = True
 
-    # def on_touch_move(self, touch):
-    #     print("up")
-    #     if self.enable_touch:
-    #         if touch.dx > 50:
-    #             self.minus_day()
-    #             self.enable_touch = False
-    #         elif touch.dx < 50:
-    #             self.plus_day()
-    #             self.enable_touch = False
+class WindowManager(ScreenManager): pass
 
 
-# class RoundedBoxButton(Button):
-#     pass
+class RoundedLabel(Label): pass
 
 
-class MenuLayout(RelativeLayout):
-    keep_disabled = []
-
-    def __init__(self, master, **kw):
-        super().__init__(**kw)
-        self.master = master
-
-    def add_btn(self, name:str, command=lambda: None, auto_hide=True):
-        # self.master = master
-        btn = MenuItem()
-        btn.ids.btn.text = name
-        btn.ids.btn.on_release = (lambda: (self.hide(), command())) if auto_hide else command
-        self.ids.menu_items.add_widget(btn)
-        return btn
-
-    def disable_widgets(self, disable:bool):
-        for widget in self.master.walk():
-            if isinstance(widget, Button):
-                if disable:
-                    if widget.disabled:
-                        self.keep_disabled.append(widget)
-                elif widget in self.keep_disabled:
-                    widget.disabled = True
-                    continue
-                widget.disabled = disable
-        if not disable:
-            self.keep_disabled.clear()
-
-    def show(self):
-        self.disable_widgets(True)
-        self.master.add_widget(self)
-
-    def hide(self):
-        self.disable_widgets(False)
-        self.master.remove_widget(self)
+class RoundedBoxButton(Button): pass
 
 
-class MenuItem(BoxLayout):
-    pass
+class CSpinner(Spinner): pass
 
 
-class LoadingLayout(RelativeLayout):
-    keep_disabled = []
+class SideLabel(Label): pass
 
-    def __init__(self, master, **kw):
-        super().__init__(**kw)
-        self.master = master
 
-    def show(self, info_text:str):
-        self.disable_widgets(True)
-        self.info.text = info_text
-        self.master.add_widget(self)
+class MenuButton(Button): pass
 
-    def hide(self, _=None):
-        self.master.remove_widget(self)
-        self.disable_widgets(False)
-        # self.master.update()
 
-    def disable_widgets(self, disable:bool):
-        for widget in self.master.walk():
-            if isinstance(widget, Button):
-                if disable:
-                    if widget.disabled:
-                        self.keep_disabled.append(widget)
-                elif widget in self.keep_disabled:
-                    widget.disabled = True
-                    continue
-                widget.disabled = disable
-        if not disable:
-            self.keep_disabled.clear()
+class RoundedButton(Button): pass
 
-    def wait_req_post(self, end_func, req_func=req_post, *args, **kwargs):
-        def run():
-            response, success = req_func(*args, **kwargs)
-            if success:
-                Clock.schedule_once(self.hide)
-            else:
-                Clock.schedule_once(ft.partial(cancel, response[0]))
-            Clock.schedule_once(ft.partial(end_func, response, success))
 
-        def cancel(response, _=None):
-            if response[0] == "ConnectionError":
-                self.info.text = f"No internet\nconnection!"
-            else:
-                self.info.text = f"FAILED!\n{response}"
-            Clock.schedule_once(self.hide, 2)
+class MenuItem(BoxLayout): pass
 
-        self.show("Please wait...")
-        thread = td.Thread(target=run)
-        thread.start()
+
+class SpinBox(BoxLayout): pass
 
 
 class LectureElement(BoxLayout):
     border_color = ListProperty([.15, .15, .15, 1])
 
+
 class LectureElementBtn(BoxLayout):
     border_color = ListProperty([.15, .15, .15, 1])
-
-class WindowManager(ScreenManager):
-    pass
-
-class RoundedLabel(Label):
-    pass
 
 
 class LectureScreen(Screen):
@@ -156,6 +77,7 @@ class LectureScreen(Screen):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.calendar_layout = CalendarLayout(self, self.custom_date)
         self.refresh_layout = LoadingLayout(self)
         self.enable_touch = True
 
@@ -169,11 +91,8 @@ class LectureScreen(Screen):
         self.menu.add_btn("Shown lectures", self.show_hidden_lectures)
         self.menu.add_btn("ORTUS", self.open_ortus)
         self.menu.add_btn("E-studies", self.open_eortus)
-
-
-        # self.add_widget(i)
         
-    def custom_date(self, instance, value, date_range):
+    def custom_date(self, value):
         old_month, old_year = self.date.month, self.date.year
         self.day_offset = (value - self.date).days
         self.date = value
@@ -183,9 +102,10 @@ class LectureScreen(Screen):
         self.refresh()
 
     def date_select(self):
-        calendar = MDDatePicker(year=self.date.year, month=self.date.month, day=self.date.day)
-        calendar.bind(on_save=self.custom_date)
-        calendar.open()
+        # calendar = MDDatePicker(year=self.date.year, month=self.date.month, day=self.date.day)
+        # calendar.bind(on_save=self.custom_date)
+        # calendar.open()
+        self.calendar_layout.show(self.date.day, self.date.month, self.date.year)
 
     def hide_subject(self, name:str, subject_id:int):
         hidden_subjects = configm.get("hiddenSubjects")
@@ -389,6 +309,7 @@ class LectureScreen(Screen):
         self.skip_if_free_day(1)
         self.read_last_scrap_date()
         self.refresh()
+        # self.date_select()
         # self.refresh_layout.show("Hmmmmm")
 
     def scrap_lectures(self, _=None, reset_days_in_fail=False):
@@ -598,8 +519,191 @@ class CourseSelectScreen(Screen):
         semesterProgramId = self.groups_by_group[self.group]["semesterProgramId"]
         self.refresh_layout.wait_req_post(scrap_completed, scrap_lectures, semesterProgramId, time_now.month, time_now.year)
 
-# sm = ScreenManager()
-# lecture_screen = LectureScreen()
-# course_screen = CourseSelectScreen()
-# sm.add_widget(lecture_screen)
-# sm.add_widget(course_screen)
+
+class CalendarDayButton(Button):
+    bg_color = ListProperty([.15, .15, .15, 1])
+
+
+class CalendarLayout(RelativeLayout):
+    keep_disabled = []
+    one_day_td = dt.timedelta(days=1)
+    free_day_color = [255/255, 70/255, 25/255, 1]
+    current_day_color = [78/255, 171/255, 79/255, 1]
+    default_day_color = [32/255, 36/255, 41/255, 1]
+
+    # def on_touch_down(self, touch):
+    #     print(touch)
+
+    def __init__(self, master, command, **kw):
+        super().__init__(**kw)
+        self.master = master
+        self.command = command
+        self.calendar = calendar.Calendar()
+
+    def disable_widgets(self, disable:bool):
+        # self.master.disabled = True
+        # self.disabled = False
+        for widget in self.master.walk():
+            if isinstance(widget, Button) or isinstance(widget, ScrollView):
+                if disable:
+                    if widget.disabled:
+                        self.keep_disabled.append(widget)
+                elif widget in self.keep_disabled:
+                    widget.disabled = True
+                    continue
+                widget.disabled = disable
+        if not disable:
+            self.keep_disabled.clear()
+
+    def fill_calendar(self):
+        self.ids.date_text.text = f"{self.date.month}.{self.date.year}"
+        for day_child, day in zip_longest(self.ids.days.children[::-1], self.calendar.itermonthdays(self.date.year, self.date.month), fillvalue=0):
+            if day != 0:
+                day_child.text = str(day)
+                day_child.disabled = False
+            #     if self.date_copy.day == day:
+            #         day_child.background_color = (0, 1, 0) if self.date_copy.month == self.date.month and self.date_copy.year == self.date.year else (0.5, 0.5, 0.)
+            else:
+                day_child.text = ""
+                day_child.disabled = True
+
+        self.current_day.bg_color = self.current_day_color if self.date_copy.month == self.date.month and self.date_copy.year == self.date.year else self.default_day_color
+            
+            
+    def show(self, day, month, year):
+        self.disable_widgets(True)
+        self.month = month
+        self.year = year
+        self.day = day
+
+        day_num = 0
+
+        self.date = dt.datetime(self.year, self.month, self.day).date()
+        self.date_copy = self.date
+
+        # for day_num, day in enumerate(self.calendar.itermonthdays(year, month), 1):
+        for day_num in range(1, 43):
+            day_num = (day_num + 1) % 7
+            day_box = CalendarDayButton(on_release=self.day_select)
+            
+            self.ids.days.add_widget(day_box)
+            
+            day_box.bg_color = self.free_day_color if not day_num % 7 or not (day_num - 1) % 7 else self.default_day_color
+
+        self.current_day = self.ids.days.children[::-1][tuple(self.calendar.itermonthdays(self.date.year, self.date.month)).index(self.day)]
+
+        self.fill_calendar()
+        self.master.add_widget(self)
+
+    def next_month(self):
+        # print(calendar.monthrange(self.date.year, self.date.month))
+        self.date = self.date.replace(day=calendar.monthrange(self.date.year, self.date.month)[1])
+        self.date += self.one_day_td
+        self.fill_calendar()
+    
+    def prev_month(self):
+        self.date = self.date.replace(day=1)
+        self.date -= self.one_day_td
+        self.fill_calendar()
+
+    def reset_date(self):
+        self.date = self.date_copy
+        self.fill_calendar()
+
+    def day_select(self, instance):
+        
+        self.hide()
+        self.command(self.date.replace(day=int(instance.text)))
+
+    def hide(self):
+        self.disable_widgets(False)
+        self.master.remove_widget(self)
+        self.ids.days.clear_widgets()
+
+
+class MenuLayout(RelativeLayout):
+    keep_disabled = []
+
+    def __init__(self, master, **kw):
+        super().__init__(**kw)
+        self.master = master
+
+    def add_btn(self, name:str, command=lambda: None, auto_hide=True):
+        # self.master = master
+        btn = MenuItem()
+        btn.ids.btn.text = name
+        btn.ids.btn.on_release = (lambda: (self.hide(), command())) if auto_hide else command
+        self.ids.menu_items.add_widget(btn)
+        return btn
+
+    def disable_widgets(self, disable:bool):
+        for widget in self.master.walk():
+            if isinstance(widget, Button):
+                if disable:
+                    if widget.disabled:
+                        self.keep_disabled.append(widget)
+                elif widget in self.keep_disabled:
+                    widget.disabled = True
+                    continue
+                widget.disabled = disable
+        if not disable:
+            self.keep_disabled.clear()
+
+    def show(self):
+        self.disable_widgets(True)
+        self.master.add_widget(self)
+
+    def hide(self):
+        self.disable_widgets(False)
+        self.master.remove_widget(self)
+
+
+class LoadingLayout(RelativeLayout):
+    keep_disabled = []
+
+    def __init__(self, master, **kw):
+        super().__init__(**kw)
+        self.master = master
+
+    def show(self, info_text:str):
+        self.disable_widgets(True)
+        self.info.text = info_text
+        self.master.add_widget(self)
+
+    def hide(self, _=None):
+        self.master.remove_widget(self)
+        self.disable_widgets(False)
+        # self.master.update()
+
+    def disable_widgets(self, disable:bool):
+        for widget in self.master.walk():
+            if isinstance(widget, Button):
+                if disable:
+                    if widget.disabled:
+                        self.keep_disabled.append(widget)
+                elif widget in self.keep_disabled:
+                    widget.disabled = True
+                    continue
+                widget.disabled = disable
+        if not disable:
+            self.keep_disabled.clear()
+
+    def wait_req_post(self, end_func, req_func=req_post, *args, **kwargs):
+        def run():
+            response, success = req_func(*args, **kwargs)
+            if success:
+                Clock.schedule_once(self.hide)
+            else:
+                Clock.schedule_once(ft.partial(cancel, response[0]))
+            Clock.schedule_once(ft.partial(end_func, response, success))
+
+        def cancel(response, _=None):
+            if response[0] == "ConnectionError":
+                self.info.text = f"No internet\nconnection!"
+            else:
+                self.info.text = f"FAILED!\n{response}"
+            Clock.schedule_once(self.hide, 2)
+
+        self.show("Please wait...")
+        thread = td.Thread(target=run)
+        thread.start()
