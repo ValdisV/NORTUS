@@ -26,6 +26,7 @@ from . import configm, lecturesm, scrap_lectures, req_post, req_get, limit_text_
 
 
 # Atslēdz swipe tad kad logs ir disabled (LectureScreen)
+# when auto refresh check if calendar is not open and isn't already refreshing
 
 
 
@@ -520,25 +521,11 @@ class CourseSelectScreen(Screen):
         self.refresh_layout.wait_req_post(scrap_completed, scrap_lectures, semesterProgramId, time_now.month, time_now.year)
 
 
-class CalendarDayButton(Button):
-    bg_color = ListProperty([.15, .15, .15, 1])
-
-
-class CalendarLayout(RelativeLayout):
-    keep_disabled = []
-    one_day_td = dt.timedelta(days=1)
-    free_day_color = [255/255, 70/255, 25/255, 1]
-    current_day_color = [78/255, 171/255, 79/255, 1]
-    default_day_color = [32/255, 36/255, 41/255, 1]
-
-    # def on_touch_down(self, touch):
-    #     print(touch)
-
-    def __init__(self, master, command, **kw):
+class TransparentBaseLayout(RelativeLayout):
+    # keep_disabled = []
+    def __init__(self, **kw):
         super().__init__(**kw)
-        self.master = master
-        self.command = command
-        self.calendar = calendar.Calendar()
+        self.keep_disabled = []
 
     def disable_widgets(self, disable:bool):
         # self.master.disabled = True
@@ -555,8 +542,48 @@ class CalendarLayout(RelativeLayout):
         if not disable:
             self.keep_disabled.clear()
 
+
+class CalendarDayButton(Button):
+    bg_color = ListProperty([.15, .15, .15, 1])
+
+
+class CalendarWeekLabel(Label):
+    bg_color = ListProperty([.15, .15, .15, 1])
+
+
+class CalendarLayout(TransparentBaseLayout):
+    # keep_disabled = []
+    one_day_td = dt.timedelta(days=1)
+    free_day_color = [255/255, 70/255, 25/255, 1]
+    current_day_color = [50/255, 131/255, 50/255, 1]
+    default_day_color = [32/255, 36/255, 41/255, 1]
+
+    # def on_touch_down(self, touch):
+    #     print(touch)
+
+    def __init__(self, master, command, **kw):
+        super().__init__(**kw)
+        self.master = master
+        self.command = command
+        self.calendar = calendar.Calendar()
+
+    # def disable_widgets(self, disable:bool):
+    #     # self.master.disabled = True
+    #     # self.disabled = False
+    #     for widget in self.master.walk():
+    #         if isinstance(widget, Button) or isinstance(widget, ScrollView):
+    #             if disable:
+    #                 if widget.disabled:
+    #                     self.keep_disabled.append(widget)
+    #             elif widget in self.keep_disabled:
+    #                 widget.disabled = True
+    #                 continue
+    #             widget.disabled = disable
+    #     if not disable:
+    #         self.keep_disabled.clear()
+
     def fill_calendar(self):
-        self.ids.date_text.text = f"{self.date.month}.{self.date.year}"
+        self.ids.date_text.text = f"{str(self.date.month).rjust(2, '0')}-{self.date.year}"
         for day_child, day in zip_longest(self.ids.days.children[::-1], self.calendar.itermonthdays(self.date.year, self.date.month), fillvalue=0):
             if day != 0:
                 day_child.text = str(day)
@@ -621,8 +648,8 @@ class CalendarLayout(RelativeLayout):
         self.ids.days.clear_widgets()
 
 
-class MenuLayout(RelativeLayout):
-    keep_disabled = []
+class MenuLayout(TransparentBaseLayout):
+    # keep_disabled = []
 
     def __init__(self, master, **kw):
         super().__init__(**kw)
@@ -636,18 +663,18 @@ class MenuLayout(RelativeLayout):
         self.ids.menu_items.add_widget(btn)
         return btn
 
-    def disable_widgets(self, disable:bool):
-        for widget in self.master.walk():
-            if isinstance(widget, Button):
-                if disable:
-                    if widget.disabled:
-                        self.keep_disabled.append(widget)
-                elif widget in self.keep_disabled:
-                    widget.disabled = True
-                    continue
-                widget.disabled = disable
-        if not disable:
-            self.keep_disabled.clear()
+    # def disable_widgets(self, disable:bool):
+    #     for widget in self.master.walk():
+    #         if isinstance(widget, Button):
+    #             if disable:
+    #                 if widget.disabled:
+    #                     self.keep_disabled.append(widget)
+    #             elif widget in self.keep_disabled:
+    #                 widget.disabled = True
+    #                 continue
+    #             widget.disabled = disable
+    #     if not disable:
+    #         self.keep_disabled.clear()
 
     def show(self):
         self.disable_widgets(True)
@@ -658,8 +685,8 @@ class MenuLayout(RelativeLayout):
         self.master.remove_widget(self)
 
 
-class LoadingLayout(RelativeLayout):
-    keep_disabled = []
+class LoadingLayout(TransparentBaseLayout):
+    # keep_disabled = []
 
     def __init__(self, master, **kw):
         super().__init__(**kw)
@@ -675,18 +702,18 @@ class LoadingLayout(RelativeLayout):
         self.disable_widgets(False)
         # self.master.update()
 
-    def disable_widgets(self, disable:bool):
-        for widget in self.master.walk():
-            if isinstance(widget, Button):
-                if disable:
-                    if widget.disabled:
-                        self.keep_disabled.append(widget)
-                elif widget in self.keep_disabled:
-                    widget.disabled = True
-                    continue
-                widget.disabled = disable
-        if not disable:
-            self.keep_disabled.clear()
+    # def disable_widgets(self, disable:bool):
+    #     for widget in self.master.walk():
+    #         if isinstance(widget, Button):
+    #             if disable:
+    #                 if widget.disabled:
+    #                     self.keep_disabled.append(widget)
+    #             elif widget in self.keep_disabled:
+    #                 widget.disabled = True
+    #                 continue
+    #             widget.disabled = disable
+    #     if not disable:
+    #         self.keep_disabled.clear()
 
     def wait_req_post(self, end_func, req_func=req_post, *args, **kwargs):
         def run():

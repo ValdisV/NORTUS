@@ -13,13 +13,22 @@ WindowManager:
     radius: [sp(10), sp(10), sp(10), sp(10)]
 
 
-<CalendarLayout>:
+<TransparentBaseLayout>:
     canvas.before:
         Color:
             rgba: 32/255, 36/255, 41/255, 0.9
         Rectangle:
             pos: self.pos
             size: self.size
+
+
+<CalendarLayout>:
+    # canvas.before:
+    #     Color:
+    #         rgba: 32/255, 36/255, 41/255, 0.9
+    #     Rectangle:
+    #         pos: self.pos
+    #         size: self.size
 
     # date_text: date_text/
 
@@ -53,7 +62,7 @@ WindowManager:
                 height: self.minimum_height
 
                 RoundedBoxButton:
-                    opacity: 0.7
+                    opacity: 0.5
                     text: "<"
                     on_release:
                         root.prev_month()
@@ -70,7 +79,7 @@ WindowManager:
                     #     orientation: "horizontal"
                             
                     RoundedBoxButton:
-                        opacity: 0.7
+                        opacity: 0.5
                         id: date_text
                         text: "DATE: NONE"
                         size_hint_x: None
@@ -84,10 +93,40 @@ WindowManager:
 
 
                 RoundedBoxButton:
-                    opacity: 0.7
+                    opacity: 0.5
                     text: ">"
                     on_release:
                         root.next_month()
+
+            GridLayout:
+                spacing: "3sp"
+                center: self.parent.center
+                size_hint: None, None
+                # size: .selfwidth, self.height
+                width: sp(40) * 7 + (sp(3) * 6)
+                height: sp(40)
+                cols: 7
+
+                CalendarWeekLabel:
+                    text: "P"
+
+                CalendarWeekLabel:
+                    text: "O"
+
+                CalendarWeekLabel:
+                    text: "T"
+
+                CalendarWeekLabel:
+                    text: "C"
+
+                CalendarWeekLabel:
+                    text: "P"
+
+                CalendarWeekLabel:
+                    text: "S"
+
+                CalendarWeekLabel:
+                    text: "Sv"
 
             GridLayout:
                 id: days
@@ -101,20 +140,17 @@ WindowManager:
 
             RoundedBoxButton:
                 size_hint_x: 1
-                opacity: 0.7
+                opacity: 0.5
                 # width: self.width
                 text: "Cancel"
                 on_release:
                     root.hide()
 
-
-
-
 <CalendarDayButton>:
     size_hint: None, None
     size: "40sp", "40sp"
     background_color: 0,0,0,0
-    opacity: 0.5 if self.disabled else 1
+    opacity: 0.5 if self.disabled or not self.state == "normal" else 1
     
     canvas.before:
         Color:
@@ -124,15 +160,27 @@ WindowManager:
             size: self.size
             radius: [sp(25)]
 
-
-
-<LoadingLayout>:
+<CalendarWeekLabel>:
+    size_hint: None, None
+    size: "40sp", "40sp"
+    background_color: 0,0,0,0
+    opacity: 0.7
+    
     canvas.before:
         Color:
-            rgba: 32/255, 36/255, 41/255, 0.9
-        Rectangle:
+            rgba: self.bg_color
+        RoundedRectangle:
             pos: self.pos
             size: self.size
+            radius: [sp(25)]
+
+<LoadingLayout>:
+    # canvas.before:
+    #     Color:
+    #         rgba: 32/255, 36/255, 41/255, 0.9
+    #     Rectangle:
+    #         pos: self.pos
+    #         size: self.size
 
     info: info
     BoxLayout:
@@ -164,12 +212,12 @@ WindowManager:
             halign: "center"
 
 <MenuLayout>:
-    canvas.before:
-        Color:
-            rgba: 32/255, 36/255, 41/255, 0.6
-        Rectangle:
-            pos: self.pos
-            size: self.size
+    # canvas.before:
+    #     Color:
+    #         rgba: 32/255, 36/255, 41/255, 0.6
+    #     Rectangle:
+    #         pos: self.pos
+    #         size: self.size
 
     # BoxLayout:
     #     orientation: "vertical"
