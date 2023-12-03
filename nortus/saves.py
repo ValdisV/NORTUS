@@ -57,6 +57,10 @@ class ConfigManager:
 
 class LectureSaveManager:
     PATH = "lectures"
+    # file_name = lambda month, year: f"{month}-{year}.json"
+
+    def get_file_path(self, month, year):
+        return os.path.join(self.PATH, f"{month}-{year}.json")
 
     def __init__(self):
         self.lectures = {}
@@ -83,16 +87,20 @@ class LectureSaveManager:
         self.lectures.update(kwargs)
         self.write(self.lectures, month, year)
 
+    def _read(self, file_path:str):
+        with open(file_path, "r", encoding="utf-8") as _file:
+            return json.load(_file)
+
     def read(self, month:int, year:int):
-        file_path = os.path.join(self.PATH, f"{month}-{year}.json")
+        file_path = self.get_file_path(month, year)
         if not os.path.isfile(file_path):
             self.file = ""
             self.lectures.clear()
             return
 
         self.file = file_path
-        with open(file_path, "r", encoding="utf-8") as _file:
-            self.lectures = json.load(_file)
+        # with open(file_path, "r", encoding="utf-8") as _file:
+        self.lectures = self._read(file_path)
 
     def read_this_month(self):
         date = dt.datetime.now()
