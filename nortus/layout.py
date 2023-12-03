@@ -1,4 +1,5 @@
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.spinner import Spinner
@@ -19,6 +20,7 @@ import functools as ft
 import threading as td
 import bs4
 import webbrowser
+import os
 
 from itertools import zip_longest
 from . import configm, lecturesm, scrap_lectures, req_post, req_get, limit_text_size, DT_FORMAT, DAYS, scrap_subjects
@@ -65,21 +67,21 @@ class LectureElement(BoxLayout):
     border_color = ListProperty([.15, .15, .15, 1])
 
 
-class LectureElementBtn(BoxLayout):
-    border_color = ListProperty([.15, .15, .15, 1])
+# class LectureElementBtn(BoxLayout):
+#     border_color = ListProperty([.15, .15, .15, 1])
 
 
 class LectureScreen(Screen):
     lecture_list = ObjectProperty(None)
     current_day = BooleanProperty(False)
     one_day_timedelta = dt.timedelta(days=1)
-    x_swipe = sp(10)
+    x_swipe = sp(15)
     street_addresses = {}
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.calendar_layout = CalendarLayout(self, self.custom_date)
         self.refresh_layout = LoadingLayout(self)
+        self.calendar_layout = CalendarLayout(self, self.custom_date, self.refresh_layout)
         self.enable_touch = True
 
         self.street_addresses_menu = MenuLayout(self)
@@ -92,15 +94,6 @@ class LectureScreen(Screen):
         self.menu.add_btn("Shown lectures", self.show_hidden_lectures)
         self.menu.add_btn("ORTUS", self.open_ortus)
         self.menu.add_btn("E-studies", self.open_eortus)
-        
-    def custom_date(self, value):
-        old_month, old_year = self.date.month, self.date.year
-        self.day_offset = (value - self.date).days
-        self.date = value
-        
-        self.skip_if_free_day(-1)
-        self.read_new_month(old_month, old_year, reset_days_in_fail=True)
-        self.refresh()
 
     def date_select(self):
         # calendar = MDDatePicker(year=self.date.year, month=self.date.month, day=self.date.day)
@@ -185,7 +178,8 @@ class LectureScreen(Screen):
         self.street_addresses_menu.add_btn("----->", self.menu.show)
 
         for short_name, long_name in self.street_addresses.items():
-            self.street_addresses_menu.add_btn(f"{short_name}  :  {long_name}", lambda: Clipboard.copy(long_name), auto_hide=False)
+            # self.street_addresses_menu.add_btn(f"{short_name}  :  {long_name}", lambda: Clipboard.copy(long_name), auto_hide=False)
+            self.street_addresses_menu.add_btn(long_name, lambda: Clipboard.copy(long_name), auto_hide=False)
 
         self.street_addresses_menu.show()
 
@@ -226,14 +220,14 @@ class LectureScreen(Screen):
         self.current_day = not self.day_offset
         lectures = lecturesm.get(str(self.date))
 
-        if self.current_day and self.date_copy.month == 11 and self.date_copy.day == 29:
-            lec_box = LectureElementBtn()
-            lec_box.name.text = "STINKY BOYS BIRTHDAY!!!"
-            lec_box.room.text = "NIPAAAAAA"
-            lec_box.time.text = "NOW HE'S OLD"
-            lec_box.ids.name.on_release = lambda: webbrowser.open("https://www.youtube.com/watch?v=fkF23cuqW08")
-            lec_box.border_color = [1, 0, 0, 1]
-            self.lecture_list.add_widget(lec_box)
+        # if self.current_day and self.date_copy.month == 11 and self.date_copy.day == 29:
+        #     lec_box = LectureElementBtn()
+        #     lec_box.name.text = "STINKY BOYS BIRTHDAY!!!"
+        #     lec_box.room.text = "NIPAAAAAA"
+        #     lec_box.time.text = "NOW HE'S OLD"
+        #     lec_box.ids.name.on_release = lambda: webbrowser.open("https://www.youtube.com/watch?v=fkF23cuqW08")
+        #     lec_box.border_color = [1, 0, 0, 1]
+        #     self.lecture_list.add_widget(lec_box)
 
         if not lectures:
             self.lecture_list.add_widget(self.free_day_box())
@@ -353,6 +347,15 @@ class LectureScreen(Screen):
                 self.scrap_lectures(reset_days_in_fail=reset_days_in_fail)
             else:
                 self.read_last_scrap_date()
+
+    def custom_date(self, value):
+        old_month, old_year = self.date.month, self.date.year
+        self.day_offset = (value - self.date_copy).days
+        self.date = value
+
+        self.skip_if_free_day(-1)
+        self.read_new_month(old_month, old_year, reset_days_in_fail=True)
+        self.refresh()
 
     def plus_day(self):
         old_month, old_year = self.date.month, self.date.year
@@ -554,18 +557,20 @@ class CalendarWeekLabel(Label):
 class CalendarLayout(TransparentBaseLayout):
     # keep_disabled = []
     one_day_td = dt.timedelta(days=1)
-    free_day_color = [255/255, 70/255, 25/255, 1]
-    current_day_color = [50/255, 131/255, 50/255, 1]
+    free_day_color = [112/255, 14/255, 0, 1]
+    free_day_color_2 = [148/255, 0/255, 0, 1]
+    current_day_color = [0/255, 84/255, 81/255, 1]
     default_day_color = [32/255, 36/255, 41/255, 1]
 
     # def on_touch_down(self, touch):
     #     print(touch)
 
-    def __init__(self, master, command, **kw):
+    def __init__(self, master, command, refresh_layout=None, **kw):
         super().__init__(**kw)
         self.master = master
         self.command = command
         self.calendar = calendar.Calendar()
+        self.refresh_layout = LoadingLayout(self.master) if refresh_layout is None else refresh_layout
 
     # def disable_widgets(self, disable:bool):
     #     # self.master.disabled = True
@@ -584,17 +589,24 @@ class CalendarLayout(TransparentBaseLayout):
 
     def fill_calendar(self):
         self.ids.date_text.text = f"{str(self.date.month).rjust(2, '0')}-{self.date.year}"
-        for day_child, day in zip_longest(self.ids.days.children[::-1], self.calendar.itermonthdays(self.date.year, self.date.month), fillvalue=0):
+        year, month = str(self.date.year).rjust(2, "0"), str(self.date.month).rjust(2, "0")
+        lecture_days = tuple(self.lectures.keys())
+        for (day_num, day_child), day in zip_longest(enumerate(self.ids.days.children[::-1], 1), self.calendar.itermonthdays(self.date.year, self.date.month), fillvalue=0):
+            day_num = (day_num + 1) % 7
             if day != 0:
                 day_child.text = str(day)
                 day_child.disabled = False
+                day_child.bg_color = self.default_day_color if f"{year}-{month}-{str(day).rjust(2, '0')}" in lecture_days else self.free_day_color if not day_num % 7 or not (day_num - 1) % 7 else self.free_day_color_2
             #     if self.date_copy.day == day:
             #         day_child.background_color = (0, 1, 0) if self.date_copy.month == self.date.month and self.date_copy.year == self.date.year else (0.5, 0.5, 0.)
             else:
                 day_child.text = ""
                 day_child.disabled = True
-
-        self.current_day.bg_color = self.current_day_color if self.date_copy.month == self.date.month and self.date_copy.year == self.date.year else self.default_day_color
+                day_child.bg_color = self.default_day_color
+                # day_child.bg_color = self.free_day_color if not day_num % 7 or not (day_num - 1) % 7 else self.default_day_color
+        if self.date_copy.month == self.date.month and self.date_copy.year == self.date.year:
+            self.current_day.bg_color = self.current_day_color 
+        # self.current_day.bg_color = self.current_day_color if self.date_copy.month == self.date.month and self.date_copy.year == self.date.year else self.default_day_color
             
             
     def show(self, day, month, year):
@@ -602,6 +614,7 @@ class CalendarLayout(TransparentBaseLayout):
         self.month = month
         self.year = year
         self.day = day
+        self.lectures = lecturesm.lectures.copy()
 
         day_num = 0
 
@@ -614,31 +627,64 @@ class CalendarLayout(TransparentBaseLayout):
             day_box = CalendarDayButton(on_release=self.day_select)
             
             self.ids.days.add_widget(day_box)
-            
-            day_box.bg_color = self.free_day_color if not day_num % 7 or not (day_num - 1) % 7 else self.default_day_color
+
+            # if not day_num % 7 or not (day_num - 1) % 7:
+            #     day_box.opacity = 0.8
+
+            # day_box.bg_color = self.free_day_color if not day_num % 7 or not (day_num - 1) % 7 else self.default_day_color
 
         self.current_day = self.ids.days.children[::-1][tuple(self.calendar.itermonthdays(self.date.year, self.date.month)).index(self.day)]
 
         self.fill_calendar()
         self.master.add_widget(self)
+        # self.refresh_layout.show("AAAAAA")
 
-    def next_month(self):
+    def scrap_lectures(self, _=None):
+        def completed(respone, success, _):
+            if not success:
+                if respone[0] == "OutOfSemester":
+                    if (self.date - self.date_copy).days > 0:
+                        # self.prev_month()
+                        Clock.schedule_once(self.prev_month, 2)
+                    else:
+                        Clock.schedule_once(self.next_month, 2)
+                        # self.next_month()
+                return
+
+            time_now = dt.datetime.now()
+            lecturesm.update(self.date.month, self.date.year, lastScrap=time_now.strftime(DT_FORMAT))
+            self.lectures = lecturesm._read(lecturesm.get_file_path(self.date.month, self.date.year))
+            self.fill_calendar()
+
+        self.refresh_layout.wait_req_post(completed, scrap_lectures, configm.get("semesterProgramId"), self.date.month, self.date.year)
+
+    def load_month(self):
+        file_path = lecturesm.get_file_path(self.date.month, self.date.year)
+        if not os.path.exists(file_path):
+            self.scrap_lectures()
+        else:
+            self.lectures = lecturesm._read(file_path)
+            self.fill_calendar()
+
+    def next_month(self, _=None):
         # print(calendar.monthrange(self.date.year, self.date.month))
         self.date = self.date.replace(day=calendar.monthrange(self.date.year, self.date.month)[1])
         self.date += self.one_day_td
-        self.fill_calendar()
+        # self.fill_calendar()
+        self.load_month()
     
-    def prev_month(self):
+    def prev_month(self, _=None):
         self.date = self.date.replace(day=1)
         self.date -= self.one_day_td
-        self.fill_calendar()
+        # self.fill_calendar()
+        self.load_month()
 
     def reset_date(self):
         self.date = self.date_copy
-        self.fill_calendar()
+        # self.fill_calendar()
+        self.load_month()
 
     def day_select(self, instance):
-        
         self.hide()
         self.command(self.date.replace(day=int(instance.text)))
 
@@ -646,6 +692,7 @@ class CalendarLayout(TransparentBaseLayout):
         self.disable_widgets(False)
         self.master.remove_widget(self)
         self.ids.days.clear_widgets()
+        self.lectures.clear()
 
 
 class MenuLayout(TransparentBaseLayout):
@@ -725,10 +772,13 @@ class LoadingLayout(TransparentBaseLayout):
             Clock.schedule_once(ft.partial(end_func, response, success))
 
         def cancel(response, _=None):
-            if response[0] == "ConnectionError":
-                self.info.text = f"No internet\nconnection!"
-            else:
-                self.info.text = f"FAILED!\n{response}"
+            match response:
+                case "ConnectionError":
+                    self.info.text = f"No internet connection!"
+                case "OutOfSemester":
+                    self.info.text = f"Out of semester!"
+                case _:
+                    self.info.text = f"FAILED!\n{response}"
             Clock.schedule_once(self.hide, 2)
 
         self.show("Please wait...")

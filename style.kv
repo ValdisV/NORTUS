@@ -104,29 +104,36 @@ WindowManager:
                 size_hint: None, None
                 # size: .selfwidth, self.height
                 width: sp(40) * 7 + (sp(3) * 6)
-                height: sp(40)
+                height: sp(30)
                 cols: 7
 
                 CalendarWeekLabel:
                     text: "P"
+                    # color: root.current_day_color
 
                 CalendarWeekLabel:
                     text: "O"
+                    # color: root.current_day_color
 
                 CalendarWeekLabel:
                     text: "T"
+                    # color: root.current_day_color
 
                 CalendarWeekLabel:
                     text: "C"
+                    # color: root.current_day_color
 
                 CalendarWeekLabel:
                     text: "P"
+                    # color: root.current_day_color
 
                 CalendarWeekLabel:
                     text: "S"
+                    # color: root.free_day_color_2
 
                 CalendarWeekLabel:
                     text: "Sv"
+                    # color: root.free_day_color_2
 
             GridLayout:
                 id: days
@@ -158,21 +165,21 @@ WindowManager:
         RoundedRectangle:
             pos: self.pos
             size: self.size
-            radius: [sp(25)]
+            radius: [sp(15)]
 
 <CalendarWeekLabel>:
     size_hint: None, None
     size: "40sp", "40sp"
     background_color: 0,0,0,0
-    opacity: 0.7
+    opacity: 0.5
     
-    canvas.before:
-        Color:
-            rgba: self.bg_color
-        RoundedRectangle:
-            pos: self.pos
-            size: self.size
-            radius: [sp(25)]
+    # canvas.before:
+    #     Color:
+    #         rgba: self.bg_color
+    #     RoundedRectangle:
+    #         pos: self.pos
+    #         size: self.size
+    #         radius: [sp(25)]
 
 <LoadingLayout>:
     # canvas.before:
@@ -621,6 +628,7 @@ WindowManager:
     TextInput:
         id: name
         readonly: True
+        # disabled: 1
         multiline: 1
         size_hint_y: None
         height: self.minimum_height
@@ -630,6 +638,7 @@ WindowManager:
         background_disabled_normal: ""
         halign: "center"
         padding: "5sp", "10sp", "5sp", "0sp"
+        allow_copy: 0
 
     BoxLayout:
         orientation: "horizontal"
@@ -642,52 +651,52 @@ WindowManager:
             id: time
             color: (.6,.6,.6,1)
 
-<LectureElementBtn>:
-    orientation: "vertical"
-    size_hint_y: None
-    height: self.minimum_height + sp(50)
-    padding: "10sp", "5sp"
+# <LectureElementBtn>:
+#     orientation: "vertical"
+#     size_hint_y: None
+#     height: self.minimum_height + sp(50)
+#     padding: "10sp", "5sp"
 
-    name: name
-    room: room
-    time: time
+#     name: name
+#     room: room
+#     time: time
 
-    canvas.before:
-        Color:
-            rgba: self.border_color
-        RoundedRectangle:
-            radius: [sp(10)]
-            size: self.size
-            pos: self.pos
-        Color:
-            rgba: 42/255, 47/255, 53/255, 1
-        RoundedRectangle:
-            size: self.width - sp(6), self.height - sp(6)
-            pos: self.x + sp(3), self.y + sp(3)
-            radius: [sp(10)]
+#     canvas.before:
+#         Color:
+#             rgba: self.border_color
+#         RoundedRectangle:
+#             radius: [sp(10)]
+#             size: self.size
+#             pos: self.pos
+#         Color:
+#             rgba: 42/255, 47/255, 53/255, 1
+#         RoundedRectangle:
+#             size: self.width - sp(6), self.height - sp(6)
+#             pos: self.x + sp(3), self.y + sp(3)
+#             radius: [sp(10)]
 
-    AnchorLayout:
-        anchor_x: "center"
-        size_hint_y: None
-        RoundedBoxButton:
-            id: name
-            size_hint: None, None
-            width: self.texture_size[0] + sp(50)
-            height: self.texture_size[1] + sp(50)
-            font_size: "16sp"
-            background_color: 0,0,0,0
-            foreground_color: 1, 1, 1, 1
+#     AnchorLayout:
+#         anchor_x: "center"
+#         size_hint_y: None
+#         RoundedBoxButton:
+#             id: name
+#             size_hint: None, None
+#             width: self.texture_size[0] + sp(50)
+#             height: self.texture_size[1] + sp(50)
+#             font_size: "16sp"
+#             background_color: 0,0,0,0
+#             foreground_color: 1, 1, 1, 1
 
-    BoxLayout:
-        orientation: "horizontal"
-        padding: "0sp"
-        Label:
-            id: room
-            color: (.6,.6,.6,1)
+#     BoxLayout:
+#         orientation: "horizontal"
+#         padding: "0sp"
+#         Label:
+#             id: room
+#             color: (.6,.6,.6,1)
 
-        Label:
-            id: time
-            color: (.6,.6,.6,1)
+#         Label:
+#             id: time
+#             color: (.6,.6,.6,1)
 
 <SpinBox>:
     orientation: "vertical"
