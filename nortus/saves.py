@@ -57,7 +57,6 @@ class ConfigManager:
 
 class LectureSaveManager:
     PATH = "lectures"
-    # file_name = lambda month, year: f"{month}-{year}.json"
 
     def get_file_path(self, month, year):
         return os.path.join(self.PATH, f"{month}-{year}.json")

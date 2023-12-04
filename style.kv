@@ -158,6 +158,7 @@ WindowManager:
     size: "40sp", "40sp"
     background_color: 0,0,0,0
     opacity: 0.5 if self.disabled or not self.state == "normal" else 1
+    color: self.fg_color
     
     canvas.before:
         Color:
@@ -165,7 +166,14 @@ WindowManager:
         RoundedRectangle:
             pos: self.pos
             size: self.size
-            radius: [sp(15)]
+            radius: [sp(25)]
+            
+        Color:
+            rgba: 32/255, 36/255, 41/255, 1
+        RoundedRectangle:
+            pos: self.x + sp(2), self.y + sp(2)
+            size: self.width - sp(4), self.height - sp(4)
+            radius: [sp(25)]
 
 <CalendarWeekLabel>:
     size_hint: None, None
@@ -744,6 +752,21 @@ WindowManager:
     height: "40sp"
     # color: .6, .6, .6
     opacity: 0.5
+    
+    canvas.before:
+        Color:
+            rgba: (32/255, 36/255, 41/255, 1)
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [sp(10)]
+
+<RoundedDropDown>:
+    background_color: 0,0,0,0
+    size_hint_y: None
+    height: "40sp"
+    # color: .6, .6, .6
+    opacity: 0.5 if self.state == "normal" else 0.3
     
     canvas.before:
         Color:

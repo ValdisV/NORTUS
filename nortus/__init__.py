@@ -1,7 +1,5 @@
 from kivy.lang import Builder
 from kivy.app import App
-# from kivymd.app import MDApp
-# from kivy.metrics import sp
 
 import requests as req
 import traceback as tb
@@ -146,7 +144,5 @@ def get_semesters():
 
 class NortusApp(App):
     def build(self):
-        # self.theme_cls.theme_style = "Dark"
-        # self.theme_cls.accent_palette = "Red"
         from .layout import WindowManager
         return Builder.load_file("style.kv")
