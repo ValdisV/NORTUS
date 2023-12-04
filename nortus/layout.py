@@ -1,13 +1,12 @@
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
+# from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
+# from kivy.uix.dropdown import DropDown
 from kivy.uix.spinner import Spinner
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.uix.scrollview import ScrollView
-
-# from kivymd.uix.pickers import MDDatePicker
 
 from kivy.properties import ObjectProperty, BooleanProperty, ListProperty
 from kivy.clock import Clock
@@ -26,10 +25,7 @@ from itertools import zip_longest
 from . import configm, lecturesm, scrap_lectures, req_post, req_get, limit_text_size, DT_FORMAT, DAYS, scrap_subjects
 
 
-
-# Atslēdz swipe tad kad logs ir disabled (LectureScreen)
-# when auto refresh check if calendar is not open and isn't already refreshing
-
+# On phone showed all as empty days in november (calendar).
 
 
 CURRENT_LECTURE_BD = [127/255, 200/255, 84/255, 1]
@@ -40,6 +36,24 @@ class WindowManager(ScreenManager): pass
 
 
 class RoundedLabel(Label): pass
+
+
+class RoundedDropDown(Button):
+    def __init__(self, master, **kwargs):
+        super().__init__(**kwargs)
+        self.master = master
+        self.widgets = []
+        self.hidding = True
+        self.bind(on_release=self.show_hide)
+
+    def add_to_list(self, widget):
+        self.widgets.append(widget)
+
+    def show_hide(self, _=None):
+        self.hidding = not self.hidding
+        command = self.master.remove_widget if self.hidding else self.master.add_widget
+        for widget in self.widgets:
+            command(widget)
 
 
 class RoundedBoxButton(Button): pass
@@ -67,10 +81,6 @@ class LectureElement(BoxLayout):
     border_color = ListProperty([.15, .15, .15, 1])
 
 
-# class LectureElementBtn(BoxLayout):
-#     border_color = ListProperty([.15, .15, .15, 1])
-
-
 class LectureScreen(Screen):
     lecture_list = ObjectProperty(None)
     current_day = BooleanProperty(False)
@@ -96,14 +106,10 @@ class LectureScreen(Screen):
         self.menu.add_btn("E-studies", self.open_eortus)
 
     def date_select(self):
-        # calendar = MDDatePicker(year=self.date.year, month=self.date.month, day=self.date.day)
-        # calendar.bind(on_save=self.custom_date)
-        # calendar.open()
         self.calendar_layout.show(self.date.day, self.date.month, self.date.year)
 
     def hide_subject(self, name:str, subject_id:int):
         hidden_subjects = configm.get("hiddenSubjects")
-        # print(subject_id)
         if name in hidden_subjects:
             hidden_subjects.remove(name)
             color = 1
@@ -178,7 +184,6 @@ class LectureScreen(Screen):
         self.street_addresses_menu.add_btn("----->", self.menu.show)
 
         for short_name, long_name in self.street_addresses.items():
-            # self.street_addresses_menu.add_btn(f"{short_name}  :  {long_name}", lambda: Clipboard.copy(long_name), auto_hide=False)
             self.street_addresses_menu.add_btn(long_name, lambda: Clipboard.copy(long_name), auto_hide=False)
 
         self.street_addresses_menu.show()
@@ -196,6 +201,7 @@ class LectureScreen(Screen):
         return lec_box
 
     def refresh(self, _=None):
+        self.lecture_list.opacity = 0
         self.remove_old_clock()
         self.lecture_list.clear_widgets()
         self.street_addresses.clear()
@@ -220,33 +226,20 @@ class LectureScreen(Screen):
         self.current_day = not self.day_offset
         lectures = lecturesm.get(str(self.date))
 
-        # if self.current_day and self.date_copy.month == 11 and self.date_copy.day == 29:
-        #     lec_box = LectureElementBtn()
-        #     lec_box.name.text = "STINKY BOYS BIRTHDAY!!!"
-        #     lec_box.room.text = "NIPAAAAAA"
-        #     lec_box.time.text = "NOW HE'S OLD"
-        #     lec_box.ids.name.on_release = lambda: webbrowser.open("https://www.youtube.com/watch?v=fkF23cuqW08")
-        #     lec_box.border_color = [1, 0, 0, 1]
-        #     self.lecture_list.add_widget(lec_box)
-
         if not lectures:
             self.lecture_list.add_widget(self.free_day_box())
         else:
-            prev_start_time = prev_end_time = refresh_after = hidden = 0
+            prev_start_time = prev_end_time = refresh_after = 0
+            hidden_lectures = []
             hidden_subjects = configm.get("hiddenSubjects")
 
             time_now = dt.datetime.now()
             
             time_now_time = time_now.hour * 60 + time_now.minute
-            # time_now_time = time_now_time - 90
 
             offseted_day = self.day_offset or self.offset_day
             
-            for lecture in lectures:
-                if any(lecture["eventTempName"].find(sub) != -1 for sub in hidden_subjects):
-                    hidden += 1
-                    continue
-                
+            for lecture in lectures:  
                 lec_box = LectureElement()
                 self.street_addresses[lecture["roomInfoText"]] = lecture["room"]["roomName"]
 
@@ -258,6 +251,10 @@ class LectureScreen(Screen):
                 lec_box.room.text = lecture["roomInfoText"]
                 lec_box.time.text = f"{start['hour']}:{str(start['minute']).rjust(2, '0')} - {end['hour']}:{str(end['minute']).rjust(2, '0')}"
 
+                if any(lecture["eventTempName"].find(sub) != -1 for sub in hidden_subjects):
+                    hidden_lectures.append(lec_box)
+                    continue
+                
                 if not offseted_day:  # only if current day is selected
                     if start_time <= time_now_time < end_time:
                         lec_box.border_color = CURRENT_LECTURE_BD
@@ -271,17 +268,32 @@ class LectureScreen(Screen):
 
                 self.lecture_list.add_widget(lec_box)
             
-            if hidden:
-                if len(lectures) == hidden:
+            if hidden_lectures:
+                total_hidden = len(hidden_lectures)
+                if len(lectures) == total_hidden:
                     self.lecture_list.add_widget(self.free_day_box())
-                message_box = RoundedLabel()
-                message_box.text = f"Hidden {hidden} lecture{'' if hidden == 1 else 's'}"
+                # message_box = RoundedLabel()
+                message_box = RoundedDropDown(self.lecture_list)
+                message_box.text = f"Hidden {total_hidden} lecture{'' if total_hidden == 1 else 's'}"
                 self.lecture_list.add_widget(message_box)
+
+                for lecture in hidden_lectures:
+                    lecture.opacity = 0.3
+                    message_box.add_to_list(lecture)
+
+                # message_box.bind(on_release=dropdown.open)
+                # dropdown.bind(on_select=lambda instance, x: setattr(message_box, 'text', x))
+                
+                # self.lecture_list.add_widget(dropdown)
 
             if refresh_after:  # current lectures start/end
                 self.auto_refresh_clock = Clock.schedule_once(self.refresh, refresh_after * 60 - time_now.second + 1)
             else:  # when day ends
                 self.auto_refresh_clock = Clock.schedule_once(self.full_refresh, 86401 - ((time_now.hour*3600) + (time_now.minute*60) + time_now.second))
+        Clock.schedule_once(self.show_lectures)
+    
+    def show_lectures(self, _=None):
+        self.lecture_list.opacity = 1
 
     def full_refresh(self, _):
         self.day_offset = 0
@@ -304,8 +316,6 @@ class LectureScreen(Screen):
         self.skip_if_free_day(1)
         self.read_last_scrap_date()
         self.refresh()
-        # self.date_select()
-        # self.refresh_layout.show("Hmmmmm")
 
     def scrap_lectures(self, _=None, reset_days_in_fail=False):
         def completed(respone, success, _):
@@ -327,16 +337,17 @@ class LectureScreen(Screen):
         self.refresh_layout.wait_req_post(completed, scrap_lectures, configm.get("semesterProgramId"), self.date.month, self.date.year)
 
     def skip_if_free_day(self, sign:int):
+        """ 'sign' value must be -1 or 1 """
         if str(self.date) not in lecturesm.lectures:
             day = dt.datetime.strftime(self.date, '%A')
             skip_days = 0
 
             match day:
-                case "Sunday":
-                    skip_days = 1 if sign == 1 else 2
                 case "Saturday":
-                    skip_days = 2 if sign == 1 else 1
-                    
+                    skip_days = 1 if sign == -1 or str(self.date + self.one_day_timedelta) in lecturesm.lectures else 2
+                case "Sunday":
+                    skip_days = 1 if sign == 1 or str(self.date - self.one_day_timedelta) in lecturesm.lectures else 2
+
             if skip_days:
                 self.date += dt.timedelta(days=skip_days) * sign
 
@@ -415,7 +426,6 @@ class CourseSelectScreen(Screen):
             spinner.values = []
 
     def clear_values(self):
-        # self.selected_data.clear()
         self.ids.courses_spin.text = ""
         self.remove_text_and_values(
             self.ids.program_spin,
@@ -531,8 +541,6 @@ class TransparentBaseLayout(RelativeLayout):
         self.keep_disabled = []
 
     def disable_widgets(self, disable:bool):
-        # self.master.disabled = True
-        # self.disabled = False
         for widget in self.master.walk():
             if isinstance(widget, Button) or isinstance(widget, ScrollView):
                 if disable:
@@ -548,6 +556,7 @@ class TransparentBaseLayout(RelativeLayout):
 
 class CalendarDayButton(Button):
     bg_color = ListProperty([.15, .15, .15, 1])
+    fg_color = ListProperty([1, 1, 1, 1])
 
 
 class CalendarWeekLabel(Label):
@@ -555,15 +564,11 @@ class CalendarWeekLabel(Label):
 
 
 class CalendarLayout(TransparentBaseLayout):
-    # keep_disabled = []
     one_day_td = dt.timedelta(days=1)
     free_day_color = [112/255, 14/255, 0, 1]
     free_day_color_2 = [148/255, 0/255, 0, 1]
     current_day_color = [0/255, 84/255, 81/255, 1]
     default_day_color = [32/255, 36/255, 41/255, 1]
-
-    # def on_touch_down(self, touch):
-    #     print(touch)
 
     def __init__(self, master, command, refresh_layout=None, **kw):
         super().__init__(**kw)
@@ -572,43 +577,31 @@ class CalendarLayout(TransparentBaseLayout):
         self.calendar = calendar.Calendar()
         self.refresh_layout = LoadingLayout(self.master) if refresh_layout is None else refresh_layout
 
-    # def disable_widgets(self, disable:bool):
-    #     # self.master.disabled = True
-    #     # self.disabled = False
-    #     for widget in self.master.walk():
-    #         if isinstance(widget, Button) or isinstance(widget, ScrollView):
-    #             if disable:
-    #                 if widget.disabled:
-    #                     self.keep_disabled.append(widget)
-    #             elif widget in self.keep_disabled:
-    #                 widget.disabled = True
-    #                 continue
-    #             widget.disabled = disable
-    #     if not disable:
-    #         self.keep_disabled.clear()
-
     def fill_calendar(self):
         self.ids.date_text.text = f"{str(self.date.month).rjust(2, '0')}-{self.date.year}"
         year, month = str(self.date.year).rjust(2, "0"), str(self.date.month).rjust(2, "0")
         lecture_days = tuple(self.lectures.keys())
         for (day_num, day_child), day in zip_longest(enumerate(self.ids.days.children[::-1], 1), self.calendar.itermonthdays(self.date.year, self.date.month), fillvalue=0):
             day_num = (day_num + 1) % 7
+
             if day != 0:
+                free_day = f"{year}-{month}-{str(day).rjust(2, '0')}" not in lecture_days
                 day_child.text = str(day)
-                day_child.disabled = False
-                day_child.bg_color = self.default_day_color if f"{year}-{month}-{str(day).rjust(2, '0')}" in lecture_days else self.free_day_color if not day_num % 7 or not (day_num - 1) % 7 else self.free_day_color_2
-            #     if self.date_copy.day == day:
-            #         day_child.background_color = (0, 1, 0) if self.date_copy.month == self.date.month and self.date_copy.year == self.date.year else (0.5, 0.5, 0.)
+                day_child.bg_color = self.free_day_color if free_day else self.default_day_color
+                day_child.disabled = free_day and (not day_num % 7 or not (day_num - 1) % 7)
             else:
                 day_child.text = ""
                 day_child.disabled = True
                 day_child.bg_color = self.default_day_color
-                # day_child.bg_color = self.free_day_color if not day_num % 7 or not (day_num - 1) % 7 else self.default_day_color
         if self.date_copy.month == self.date.month and self.date_copy.year == self.date.year:
-            self.current_day.bg_color = self.current_day_color 
-        # self.current_day.bg_color = self.current_day_color if self.date_copy.month == self.date.month and self.date_copy.year == self.date.year else self.default_day_color
-            
-            
+            self.current_day.bg_color = self.current_day_color
+        if self.current_date.month == self.date.month and self.current_date.year == self.date.year:
+            self.now_day.fg_color = self.current_day_color
+        else:
+            self.now_day.fg_color = [1, 1, 1, 0.3 if self.now_day.disabled else 1]
+            # print(self.now_day.disabled_color)
+            # self.now_day.disabled_fg_color = [1, 1, 1, 0.3]
+
     def show(self, day, month, year):
         self.disable_widgets(True)
         self.month = month
@@ -620,35 +613,27 @@ class CalendarLayout(TransparentBaseLayout):
 
         self.date = dt.datetime(self.year, self.month, self.day).date()
         self.date_copy = self.date
+        self.current_date = dt.datetime.now()
 
-        # for day_num, day in enumerate(self.calendar.itermonthdays(year, month), 1):
         for day_num in range(1, 43):
             day_num = (day_num + 1) % 7
             day_box = CalendarDayButton(on_release=self.day_select)
-            
             self.ids.days.add_widget(day_box)
 
-            # if not day_num % 7 or not (day_num - 1) % 7:
-            #     day_box.opacity = 0.8
-
-            # day_box.bg_color = self.free_day_color if not day_num % 7 or not (day_num - 1) % 7 else self.default_day_color
-
         self.current_day = self.ids.days.children[::-1][tuple(self.calendar.itermonthdays(self.date.year, self.date.month)).index(self.day)]
-
+        self.now_day = self.ids.days.children[::-1][tuple(self.calendar.itermonthdays(self.current_date.year, self.current_date.month)).index(self.current_date.day)]
+        
         self.fill_calendar()
         self.master.add_widget(self)
-        # self.refresh_layout.show("AAAAAA")
 
     def scrap_lectures(self, _=None):
         def completed(respone, success, _):
             if not success:
                 if respone[0] == "OutOfSemester":
                     if (self.date - self.date_copy).days > 0:
-                        # self.prev_month()
                         Clock.schedule_once(self.prev_month, 2)
                     else:
                         Clock.schedule_once(self.next_month, 2)
-                        # self.next_month()
                 return
 
             time_now = dt.datetime.now()
@@ -667,21 +652,17 @@ class CalendarLayout(TransparentBaseLayout):
             self.fill_calendar()
 
     def next_month(self, _=None):
-        # print(calendar.monthrange(self.date.year, self.date.month))
         self.date = self.date.replace(day=calendar.monthrange(self.date.year, self.date.month)[1])
         self.date += self.one_day_td
-        # self.fill_calendar()
         self.load_month()
     
     def prev_month(self, _=None):
         self.date = self.date.replace(day=1)
         self.date -= self.one_day_td
-        # self.fill_calendar()
         self.load_month()
 
     def reset_date(self):
         self.date = self.date_copy
-        # self.fill_calendar()
         self.load_month()
 
     def day_select(self, instance):
@@ -696,8 +677,6 @@ class CalendarLayout(TransparentBaseLayout):
 
 
 class MenuLayout(TransparentBaseLayout):
-    # keep_disabled = []
-
     def __init__(self, master, **kw):
         super().__init__(**kw)
         self.master = master
@@ -710,19 +689,6 @@ class MenuLayout(TransparentBaseLayout):
         self.ids.menu_items.add_widget(btn)
         return btn
 
-    # def disable_widgets(self, disable:bool):
-    #     for widget in self.master.walk():
-    #         if isinstance(widget, Button):
-    #             if disable:
-    #                 if widget.disabled:
-    #                     self.keep_disabled.append(widget)
-    #             elif widget in self.keep_disabled:
-    #                 widget.disabled = True
-    #                 continue
-    #             widget.disabled = disable
-    #     if not disable:
-    #         self.keep_disabled.clear()
-
     def show(self):
         self.disable_widgets(True)
         self.master.add_widget(self)
@@ -733,8 +699,6 @@ class MenuLayout(TransparentBaseLayout):
 
 
 class LoadingLayout(TransparentBaseLayout):
-    # keep_disabled = []
-
     def __init__(self, master, **kw):
         super().__init__(**kw)
         self.master = master
@@ -747,20 +711,6 @@ class LoadingLayout(TransparentBaseLayout):
     def hide(self, _=None):
         self.master.remove_widget(self)
         self.disable_widgets(False)
-        # self.master.update()
-
-    # def disable_widgets(self, disable:bool):
-    #     for widget in self.master.walk():
-    #         if isinstance(widget, Button):
-    #             if disable:
-    #                 if widget.disabled:
-    #                     self.keep_disabled.append(widget)
-    #             elif widget in self.keep_disabled:
-    #                 widget.disabled = True
-    #                 continue
-    #             widget.disabled = disable
-    #     if not disable:
-    #         self.keep_disabled.clear()
 
     def wait_req_post(self, end_func, req_func=req_post, *args, **kwargs):
         def run():
