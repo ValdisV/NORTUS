@@ -13,16 +13,16 @@ class ConfigManager:
         "courseNum": None,
         "groupNum": None,
         "hiddenSubjects": [],
-        "subjects": None,
-        "semesters": {
-            "Rudens semestris": None,
-            "Pavasara semestris": None,
-            "Vasaras semestris": None
-        }, 
-        "holidays": {
-            "Ziemassvētku un Jaungada brīvdienas": None,
-            "Lieldienu brīvdienas": None
-        }
+        "subjects": [],
+        # "semesters": {
+        #     "Rudens semestris": None,
+        #     "Pavasara semestris": None,
+        #     "Vasaras semestris": None
+        # }, 
+        # "holidays": {
+        #     "Ziemassvētku un Jaungada brīvdienas": None,
+        #     "Lieldienu brīvdienas": None
+        # }
     }
 
     def __init__(self):
@@ -56,7 +56,12 @@ class ConfigManager:
 
 
 class LectureSaveManager:
-    PATH = "lectures"
+    PATH = "saves"
+    DATA_SAVE_PATH = os.path.join(PATH, "data.json")
+    DEFAULT_DATA = {
+        "hiddenSubjects": [],
+        "subjects": [],
+    }
 
     def get_file_path(self, month, year):
         return os.path.join(self.PATH, f"{month}-{year}.json")
@@ -78,8 +83,10 @@ class LectureSaveManager:
         return self.lectures.get(date)
     
     def write(self, lectures:dict, month, year):
-        with open(os.path.join(self.PATH, f"{month}-{year}.json"), "w", encoding="utf-8") as w:
-            w.write(json.dumps(lectures, indent=4))
+        # with open(os.path.join(self.PATH, f"{month}-{year}.json"), "w", encoding="utf-8") as w:
+        #     w.write(json.dumps(lectures, indent=4))
+        self.file = self.get_file_path(month, year)
+        self._write(self.file, lectures)
         self.lectures = lectures
 
     def update(self, month, year, **kwargs):
@@ -89,6 +96,24 @@ class LectureSaveManager:
     def _read(self, file_path:str):
         with open(file_path, "r", encoding="utf-8") as _file:
             return json.load(_file)
+        
+    def _write(self, path, data):
+        with open(path, "w", encoding="utf-8") as w:
+            w.write(json.dumps(data, indent=4))
+        
+    # def read_data(self):
+    #     if not os.path.isfile(self.DATA_SAVE_PATH):
+    #         self._write(self.DATA_SAVE_PATH, self.DEFAULT_DATA)
+    #         self.data = self.DEFAULT_DATA
+    #         return
+    #     self.data = self._read(self.DATA_SAVE_PATH)
+
+    # def update_data(self, **kwargs):
+    #     self.data.update(kwargs)
+    #     self._write(self.DATA_SAVE_PATH, self.data)
+
+    # def get_from_data(self, value:str):
+    #     return self.data.get(value)
 
     def read(self, month:int, year:int):
         file_path = self.get_file_path(month, year)

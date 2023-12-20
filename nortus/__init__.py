@@ -4,9 +4,14 @@ from kivy.app import App
 import requests as req
 import traceback as tb
 import datetime as dt
-import bs4
+import time
 
 from .saves import ConfigManager, LectureSaveManager
+
+
+CREATED_BY = "ValdisV"
+__version__ = "0.1.b"
+
 
 DATE_FORMAT = "%Y-%m-%d"
 TIME_FORMAT = "%H:%M:%S"
@@ -27,6 +32,7 @@ configm = ConfigManager()
 configm.read()
 
 lecturesm = LectureSaveManager()
+# lecturesm.read_data()
 lecturesm.read_this_month()
 
 
@@ -82,7 +88,7 @@ def scrap_lectures(program_id:int, month:int, year:int):
     })
 
     if success:
-        lecture_dates = {"lastScrap": None}
+        lecture_dates = {"lastScrap": dt.datetime.now().strftime(DT_FORMAT)}
         
         try:
             for lecture in response.json():
@@ -90,12 +96,22 @@ def scrap_lectures(program_id:int, month:int, year:int):
                 if date not in lecture_dates:
                     lecture_dates[date] = []
                 lecture_dates[date].append(lecture)
-            
+
             lecturesm.write(lecture_dates, month, year)
         except req.exceptions.JSONDecodeError as exc:
             response, success = ("OutOfSemester", exc), False
-            
+    
     return response, success
+
+def scrap_multiple_lectures(program_id:int, dates:list):
+    responses = []
+    for month, year in dates:
+        response, success = scrap_lectures(program_id, month, year)
+        responses.append({"month": month, "year": year, "response": response, "success": success})
+        if not success:
+            break
+        time.sleep(0.1)
+    return responses, success
 
 
 class TxtWeb:
@@ -108,41 +124,41 @@ class TxtWeb:
         return self.data
 
 
-def get_semesters():
-    # response, success = req_get("https://www.rtu.lv/lv/studijas/akademiska-gada-kalendars")
+# def get_semesters():
+#     # response, success = req_get("https://www.rtu.lv/lv/studijas/akademiska-gada-kalendars")
     
-    success = True
-    response = TxtWeb("web.txt")
+#     success = True
+#     response = TxtWeb("web.txt")
 
-    if success:
-        semesters = configm.get("semesters")
-        holidays = configm.get("holidays")
+#     if success:
+#         semesters = configm.get("semesters")
+#         holidays = configm.get("holidays")
 
-        soup = bs4.BeautifulSoup(response.text, "html.parser")
-        event_list = soup.find(class_="highlight_contents uce-iframe-content-container").find_all("p")
+#         soup = bs4.BeautifulSoup(response.text, "html.parser")
+#         event_list = soup.find(class_="highlight_contents uce-iframe-content-container").find_all("p")
 
-        for events in event_list:
-            for event in events.text.split("\n"):
-                event_splited = event.split(" ")
+#         for events in event_list:
+#             for event in events.text.split("\n"):
+#                 event_splited = event.split(" ")
 
-                match event_splited[0]:
-                    case "t.sk.":
-                        for holiday in holidays.keys():
-                            if event.find(holiday) != -1 and holidays.get(holiday) is None:
-                                holidays[holiday] = [str(dt.datetime.strptime(date, "%d.%m.%Y.").strftime(DT_FORMAT).date()) for date in event_splited[-1].split(",")[0].split("\u2013")]
-                                break
-                    case _:
-                        for semester in semesters.keys():
-                            if event.find(semester) != -1 and semesters.get(semester) is None:
-                                semesters[semester] = [str(dt.datetime.strptime(date, "%d.%m.%Y.").strftime(DT_FORMAT).date()) for date in event_splited[-1].split(",")[0].split("\u2013")]
-                                break
+#                 match event_splited[0]:
+#                     case "t.sk.":
+#                         for holiday in holidays.keys():
+#                             if event.find(holiday) != -1 and holidays.get(holiday) is None:
+#                                 holidays[holiday] = [str(dt.datetime.strptime(date, "%d.%m.%Y.").strftime(DT_FORMAT).date()) for date in event_splited[-1].split(",")[0].split("\u2013")]
+#                                 break
+#                     case _:
+#                         for semester in semesters.keys():
+#                             if event.find(semester) != -1 and semesters.get(semester) is None:
+#                                 semesters[semester] = [str(dt.datetime.strptime(date, "%d.%m.%Y.").strftime(DT_FORMAT).date()) for date in event_splited[-1].split(",")[0].split("\u2013")]
+#                                 break
 
-        configm.update(semesters=semesters, holidays=holidays)
+#         configm.update(semesters=semesters, holidays=holidays)
 
-    return response, success
+#     return response, success
 
 
-class NortusApp(App):
+class NORTUSApp(App):
     def build(self):
         from .layout import WindowManager
         return Builder.load_file("style.kv")

@@ -1,8 +1,9 @@
 import shutil
 import os
 import glob
+from subprocess import call
 
-APP_NAME = "NORTUS"
+APP_NAME = "NORTUS - UBUNTU"
 __version__ = "1.0"
 PATH = r"\\wsl.localhost\Ubuntu\home\valdisv\nortus"
 DEVICE = "R58RA2H4D4H"
@@ -14,7 +15,6 @@ COPY = (
     ["build_files", "icon.png"],
     ["build_files", "buildozer.spec"],
     ["build_files", "presplash.png"],
-    ["build_files", "udev.py"],
     "nortus",
     "images"
 )
@@ -27,25 +27,23 @@ class App:
         while self.running:
             answer = ""
             print(f" '{APP_NAME}' - DEV TOOL - v.{__version__}  ".center(100, "-"))
-            print("1 - Copy files to ubuntu")
-            print("2 - Upload app to phone")
-            print("3 - Show logs")
-            print("4 - Shutdown ubuntu")
-            print("5 - Exit")
+            print("1 - Build debug app")
+            print("2 - Clear android build")
+            print("3 - Open folder")
+            print("4 - Exit")
             while answer not in ("1", "2", "3", "4", "5"):
                 answer = input("-> ")
             
             try:
                 match int(answer):
                     case 1:
-                        self.copy_to_ubuntu()
+                        os.system("buildozer android debug")
                     case 2:
-                        self.upload_to_phone()
+                        os.system("buildozer android clean")
                     case 3:
-                        self.log_phone()
+                        call(['.', 'alias open="explorer.exe"', 'open .'])
+                        # os.system('alias open="explorer.exe"; open .')
                     case 4:
-                        self.shut_down_ubuntu()
-                    case 5:
                         self.running = False
             except KeyboardInterrupt:
                 pass   
