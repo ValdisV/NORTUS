@@ -1,5 +1,6 @@
 /.venv
-/config.json
-/lectures
-/test.py
+/saves
 /web.txt
+/config.json
+/test.py
+/dev_data.py

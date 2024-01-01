@@ -1,4 +1,4 @@
-from nortus import NortusApp
+from nortus import NORTUSApp
 
 if __name__ == "__main__":
-    NortusApp().run()
+    NORTUSApp().run()

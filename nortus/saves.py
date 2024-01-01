@@ -13,16 +13,9 @@ class ConfigManager:
         "courseNum": None,
         "groupNum": None,
         "hiddenSubjects": [],
-        "subjects": None,
-        "semesters": {
-            "Rudens semestris": None,
-            "Pavasara semestris": None,
-            "Vasaras semestris": None
-        }, 
-        "holidays": {
-            "Ziemassvētku un Jaungada brīvdienas": None,
-            "Lieldienu brīvdienas": None
-        }
+        "semesterStart": None,
+        "semesterEnd": None,
+        "subjects": [],
     }
 
     def __init__(self):
@@ -56,7 +49,7 @@ class ConfigManager:
 
 
 class LectureSaveManager:
-    PATH = "lectures"
+    PATH = "saves"
 
     def get_file_path(self, month, year):
         return os.path.join(self.PATH, f"{month}-{year}.json")
@@ -78,9 +71,7 @@ class LectureSaveManager:
         return self.lectures.get(date)
     
     def write(self, lectures:dict, month, year):
-        with open(os.path.join(self.PATH, f"{month}-{year}.json"), "w", encoding="utf-8") as w:
-            w.write(json.dumps(lectures, indent=4))
-        self.lectures = lectures
+        self._write(self.get_file_path(month, year), lectures)
 
     def update(self, month, year, **kwargs):
         self.lectures.update(kwargs)
@@ -89,8 +80,12 @@ class LectureSaveManager:
     def _read(self, file_path:str):
         with open(file_path, "r", encoding="utf-8") as _file:
             return json.load(_file)
+        
+    def _write(self, path, data):
+        with open(path, "w", encoding="utf-8") as w:
+            w.write(json.dumps(data, indent=4))
 
-    def read(self, month:int, year:int):
+    def load_month(self, month, year):
         file_path = self.get_file_path(month, year)
         if not os.path.isfile(file_path):
             self.file = ""
@@ -98,9 +93,11 @@ class LectureSaveManager:
             return
 
         self.file = file_path
-        # with open(file_path, "r", encoding="utf-8") as _file:
         self.lectures = self._read(file_path)
 
-    def read_this_month(self):
-        date = dt.datetime.now()
-        self.read(date.month, date.year)
+    def read(self, month, year):
+        return self._read(self.get_file_path(month, year))
+
+    def load_this_month(self):
+        dt_now = dt.datetime.now()
+        self.read(dt_now.month, dt_now.year)
