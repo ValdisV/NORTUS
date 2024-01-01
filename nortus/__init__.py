@@ -32,8 +32,6 @@ configm = ConfigManager()
 configm.read()
 
 lecturesm = LectureSaveManager()
-# lecturesm.read_data()
-lecturesm.read_this_month()
 
 
 def try_execute_req(func):
@@ -79,6 +77,20 @@ def scrap_subjects(program_id:int):
     return response, success
 
 
+def scrap_semester_start_end(semester_id):
+    response, success = req_post("https://nodarbibas.rtu.lv/getChousenSemesterStartEndDate", {
+        "semesterId": semester_id,
+    })
+
+    if success:
+        try:
+            data = response.json()
+            configm.update(semesterStart=data["startDate"], semesterEnd=data["endDate"])
+        except req.exceptions.JSONDecodeError as exc:
+            response, success = ("NoSemesterDates", exc), False
+
+    return response, success
+
 
 def scrap_lectures(program_id:int, month:int, year:int):
     response, success = req_post("https://nodarbibas.rtu.lv/getSemesterProgEventList", {
@@ -103,6 +115,7 @@ def scrap_lectures(program_id:int, month:int, year:int):
     
     return response, success
 
+
 def scrap_multiple_lectures(program_id:int, dates:list):
     responses = []
     for month, year in dates:
@@ -122,40 +135,6 @@ class TxtWeb:
     @property
     def text(self):
         return self.data
-
-
-# def get_semesters():
-#     # response, success = req_get("https://www.rtu.lv/lv/studijas/akademiska-gada-kalendars")
-    
-#     success = True
-#     response = TxtWeb("web.txt")
-
-#     if success:
-#         semesters = configm.get("semesters")
-#         holidays = configm.get("holidays")
-
-#         soup = bs4.BeautifulSoup(response.text, "html.parser")
-#         event_list = soup.find(class_="highlight_contents uce-iframe-content-container").find_all("p")
-
-#         for events in event_list:
-#             for event in events.text.split("\n"):
-#                 event_splited = event.split(" ")
-
-#                 match event_splited[0]:
-#                     case "t.sk.":
-#                         for holiday in holidays.keys():
-#                             if event.find(holiday) != -1 and holidays.get(holiday) is None:
-#                                 holidays[holiday] = [str(dt.datetime.strptime(date, "%d.%m.%Y.").strftime(DT_FORMAT).date()) for date in event_splited[-1].split(",")[0].split("\u2013")]
-#                                 break
-#                     case _:
-#                         for semester in semesters.keys():
-#                             if event.find(semester) != -1 and semesters.get(semester) is None:
-#                                 semesters[semester] = [str(dt.datetime.strptime(date, "%d.%m.%Y.").strftime(DT_FORMAT).date()) for date in event_splited[-1].split(",")[0].split("\u2013")]
-#                                 break
-
-#         configm.update(semesters=semesters, holidays=holidays)
-
-#     return response, success
 
 
 class NORTUSApp(App):

@@ -1,13 +1,14 @@
 import shutil
 import os
 import glob
+try:
+    from dev_data import UBUNTU_APP_PATH, DEVICE
+except ImportError:
+    pass
+
 
 APP_NAME = "NORTUS"
 __version__ = "1.0"
-PATH = r"\\wsl.localhost\Ubuntu\home\valdisv\nortus"
-DEVICE = "R58RA2H4D4H"
-# DEVICE = "f0bd383e"
-
 COPY = (
     "main.py",
     "style.kv",
@@ -18,6 +19,7 @@ COPY = (
     "nortus",
     "images"
 )
+
 
 class App:
     def __init__(self):
@@ -54,19 +56,19 @@ class App:
         for _file in COPY:
             if type(_file) is list or os.path.splitext(_file)[1]:
                 if type(_file) is list:
-                    shutil.copyfile(os.path.join(*_file), os.path.join(PATH, _file[1]))
+                    shutil.copyfile(os.path.join(*_file), os.path.join(UBUNTU_APP_PATH, _file[1]))
                 else:
-                    shutil.copyfile(_file, os.path.join(PATH, _file))
+                    shutil.copyfile(_file, os.path.join(UBUNTU_APP_PATH, _file))
 
                 print(f"Copied: {_file}")
                 continue
             for data in os.listdir(_file):
                 if os.path.splitext(os.path.join(_file, data))[1]:
-                    shutil.copyfile(os.path.join(_file, data), os.path.join(PATH, _file, data))
+                    shutil.copyfile(os.path.join(_file, data), os.path.join(UBUNTU_APP_PATH, _file, data))
                     print(f"Copied: {_file}\\{data}")
 
     def upload_to_phone(self):
-        files = sorted(glob.iglob(os.path.join(PATH, "bin", "*")), key=os.path.getctime, reverse=True)
+        files = sorted(glob.iglob(os.path.join(UBUNTU_APP_PATH, "bin", "*")), key=os.path.getctime, reverse=True)
         os.system(f"adb devices")
         os.system(f"adb -s {DEVICE} install {files[0]}")
 
@@ -76,12 +78,6 @@ class App:
     def shut_down_ubuntu(self):
         os.system("wsl --shutdown")
 
-
-# def ask_y_n(text:str):
-#     while True:
-#         answer = input(f"{text} [y/n]: ")
-#         if answer in ("y", "n"):
-#             return answer
 
 if __name__ == "__main__":
     app = App()

@@ -57,6 +57,7 @@ WindowManager:
                 height: self.minimum_height
 
                 RoundedBoxButton:
+                    id: prev_month
                     opacity: 0.5
                     text: "<"
                     on_release:
@@ -84,6 +85,7 @@ WindowManager:
 
 
                 RoundedBoxButton:
+                    id: next_month
                     opacity: 0.5
                     text: ">"
                     on_release:
@@ -243,6 +245,23 @@ WindowManager:
         opacity: 0 if root.image_path is None else 0.7
 
 
+<MenuItemLabel>:
+    size_hint_y: None
+    height: "50sp"
+
+    canvas.before:
+        Color:
+            rgba: (.1, .1, .1, 1)
+        RoundedRectangle:
+            pos: self.pos[0] + sp(2), self.pos[1] + sp(2)
+            size: self.size[0] - sp(4), self.size[1] - sp(4)
+            radius: [sp(10)]  
+
+    background_color: 0,0,0,0
+    text_size: self.width - sp(50), self.height
+    halign: "center"
+    valign: "center"
+    color: 1, 1, 1, 0.3
 
 <LectureScreen>:
     name: "lectures"
@@ -332,6 +351,7 @@ WindowManager:
                     height: self.minimum_height
 
                     RoundedBoxButton:
+                        id: prev_day
                         opacity: 0.7
                         text: "<"
                         on_release: root.change_day(-1)
@@ -371,6 +391,7 @@ WindowManager:
 
 
                     RoundedBoxButton:
+                        id: next_day
                         opacity: 0.7
                         text: ">"
                         on_release: root.change_day(1)
