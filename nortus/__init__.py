@@ -4,13 +4,13 @@ from kivy.app import App
 import requests as req
 import traceback as tb
 import datetime as dt
-import time
+import functools as ft
 
 from .saves import ConfigManager, LectureSaveManager
 
 
 CREATED_BY = "ValdisV"
-__version__ = "0.1.b"
+__version__ = "1.0.0"
 
 
 DATE_FORMAT = "%Y-%m-%d"
@@ -19,13 +19,13 @@ DT_FORMAT = f"{DATE_FORMAT} {TIME_FORMAT}"
 
 MAX_TEXT_SIZE = 40
 DAYS = {
-    "Monday": "Pirmd.",
-    "Tuesday": "Otrd.",
-    "Wednesday": "Trešd.",
-    "Thursday": "Ceturd.",
-    "Friday": "Piektd.",
-    "Saturday": "Sestd.",
-    "Sunday": "Svētd.",
+    "Monday": "Mon.",
+    "Tuesday": "Tues.",
+    "Wednesday": "Wednes.",
+    "Thursday": "Thurs.",
+    "Friday": "Fri.",
+    "Saturday": "Satur.",
+    "Sunday": "Sun.",
 }
 
 configm = ConfigManager()
@@ -35,6 +35,7 @@ lecturesm = LectureSaveManager()
 
 
 def try_execute_req(func):
+    @ft.wraps(func)
     def wrap(*args, **kwargs):
         try:
             response = func(*args, **kwargs)
@@ -123,7 +124,6 @@ def scrap_multiple_lectures(program_id:int, dates:list):
         responses.append({"month": month, "year": year, "response": response, "success": success})
         if not success:
             break
-        time.sleep(0.1)
     return responses, success
 
 
