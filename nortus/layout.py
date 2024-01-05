@@ -18,7 +18,6 @@ import threading as td
 import bs4
 import webbrowser
 import os
-import functools as ft
 
 from itertools import zip_longest
 from . import configm, lecturesm, scrap_semester_start_end, scrap_lectures, req_post, req_get, limit_text_size, DT_FORMAT, DAYS, scrap_subjects, scrap_multiple_lectures, CREATED_BY, __version__
@@ -226,10 +225,10 @@ class LectureScreen(Screen):
 
     def touched_moved(self, instance, touch=None):
         if self.enable_touch:
-            if touch.dx > self.X_SWIPE:
+            if touch.dx > self.X_SWIPE and not self.ids.prev_day.disabled:
                 self.change_day(-1)
                 self.enable_touch = False
-            elif touch.dx < -self.X_SWIPE:
+            elif touch.dx < -self.X_SWIPE and not self.ids.next_day.disabled:
                 self.change_day(1)
                 self.enable_touch = False
 
