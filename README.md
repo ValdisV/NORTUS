@@ -1,3 +1,7 @@
+* **Aplikāciju izstrādāja:** Valdis Vilcāns 231RDB110
+* **Mans universitātes GitHub konts:** [github.com/valdisvilcans1](https://github.com/valdisvilcans1)
+* Šis nav mans universitātes GitHub konts, jo aplikācija ir ilgākā tapšanas procesā, nekā tika uzdots šis uzdevums un visas augšuplādes (*commits*) veicu uz šo kontu.
+
 # Par programmu:
 ### Pamatinformācija:
 * **Nosaukums:** NORTUS
