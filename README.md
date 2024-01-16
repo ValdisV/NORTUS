@@ -8,7 +8,23 @@
 * **Nodarbību informācijas ieguves saite (*web scraped from*):** [*nodarbibas.rtu.lv*](https://nodarbibas.rtu.lv/)
 * **Aplikācijā izmantotās ikonas:** [Unicons Font - Free User Interface Icon Pack](https://iconscout.com/free-icon-pack/user-interface-123)
 
-### Mērķis:
+###  Kā instalēt:
+1. **Ieteicamā *python* versija:** [3.11](https://www.python.org/downloads/) (*nevaru garantēt, ka uz citas versijas mana programma strādās*)
+
+2. **Nepieciešams instalēt:** pip install --upgrade pip setuptools virtualenv
+3. **Lai palaistu skriptu ir ieteicams izveidot virtuālo *python* vidi (*virtual environments - venv*) programmas mapē:**
+ * **Izveide:** python -m venv .venv
+ * **Aktivizācija:** .venv/Scripts/activate
+4. **Nepieciešamās bibliotēkas var instalēt divos veidos:**
+ * pip install "kivy[base]" kivy_examples bs4
+ * **vai (*rekomendēts, ja ir izveidota virtuālā vide*)**
+ * pip install -r requirements.txt
+5. **Programmu palaiž ar failu:** main.py
+
+### Aplikācijas instalācija uz telefona:
+* Visas izlaistās *apk* versijas ir pieejamas [bin](/bin) mapē.
+
+### Programmas mērķis:
 * Programmas mērķis ir iegūt, saglabāt un vizuāli parādīt RTU nodarbību sarakstu, lietotāja izvēlētajam semestrim, programmai, kursam un grupai.
 
 * Izstrādāt aplikāciju priekš skārienjūtīgiem telefoniem ar operētājsistēmu *Android*.
@@ -37,7 +53,7 @@
 * ***threading*** - ļauj veikt paralēlus procesus. Izmantots informācijas ieguves posmā no interneta, lai neapstādinātu galveno procesu.
 * ***beautifulsoup4 "bs4"*** - izmantos, lai viegli pārvietotus un meklētu informāciju *HTML*** skriptā.
 * ***webbrowser*** - ļauj atvērt interneta saiti pārlūkprogrammā.
-* ***os*** - ļauj pārlūkot aplikācijas saglabātos failus, veidot mapes, u.t.t..
+* ***os*** - ļauj pārlūkot programmas saglabātos failus, veidot mapes, u.t.t..
 * ***itertools*** - izmantots kalendāram, lai apvienotu pogas ar dienām vienā ciklā.
 * ***json*** - izmantots, lai rakstītu un lasītu *.json* tipa failus.
 
@@ -129,4 +145,4 @@ Caur šo logu var paslēpt nodarbības, kuras neattiecās uz lietotāju.
 3. Uzspiežot atjaunina nodarbību sarakstu no interneta. *Atjauninot mēnešus, nodarbību saraksts netiek atjaunināts.*
 
 ## 8. Izvēlnes logs - info izvēlne
-Šajā logā tiek parādīta informācija 1.logā atlasīto informāciju un informācija par pašu aplikāciju.
+Šajā logā tiek parādīta informācija par 1.logā atlasīto informāciju un informācija par pašu aplikāciju.

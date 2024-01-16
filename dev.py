@@ -15,7 +15,6 @@ COPY = (
     ["build_files", "icon.png"],
     ["build_files", "buildozer.spec"],
     ["build_files", "presplash.png"],
-    ["build_files", "udev.py"],
     "nortus",
     "images"
 )
@@ -32,12 +31,14 @@ class App:
             print("1 - Copy files to ubuntu")
             print("2 - Upload app to phone")
             print("3 - Show logs")
-            print("4 - Shutdown ubuntu")
-            print("5 - Exit")
-            while answer not in ("1", "2", "3", "4", "5"):
-                answer = input("-> ")
-            
+            print("4 - Copy builds to bin")
+            print("5 - Shutdown ubuntu")
+            print("6 - Exit")
+
             try:
+                while answer not in ("1", "2", "3", "4", "5", "6"):
+                    answer = input("-> ")
+
                 match int(answer):
                     case 1:
                         self.copy_to_ubuntu()
@@ -46,11 +47,19 @@ class App:
                     case 3:
                         self.log_phone()
                     case 4:
-                        self.shut_down_ubuntu()
+                        self.copy_to_bin()
                     case 5:
+                        self.shut_down_ubuntu()
+                    case 6:
                         self.running = False
             except KeyboardInterrupt:
-                pass   
+                pass
+
+    def copy_to_bin(self):
+        bin_path = os.path.join(UBUNTU_APP_PATH, "bin")
+        for _file in os.listdir(bin_path):
+            shutil.copyfile(os.path.join(bin_path, _file), os.path.join("bin", _file))
+            print(f"Copied: {_file}")
 
     def copy_to_ubuntu(self):
         for _file in COPY:

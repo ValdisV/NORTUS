@@ -324,7 +324,7 @@ WindowManager:
                             source: "images/menu-2.png"
                             size: self.width, self.height
                             pos: self.pos
-                    on_release: root.open_menu()
+                    on_release: root.menu.show()
 
         BoxLayout:
             orientation: "vertical"
@@ -371,7 +371,7 @@ WindowManager:
                             width: self.texture_size[0] + sp(50)
                             font_size: "16sp"
                             on_release:
-                                root.select_date()
+                                root.show_calendar()
 
                         RoundedBoxButton:
                             opacity: 0.2 if root.current_day else 0.7
