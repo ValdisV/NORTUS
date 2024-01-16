@@ -30,11 +30,18 @@ DAYS = {
 
 configm = ConfigManager()
 configm.read()
-
 lecturesm = LectureSaveManager()
 
 
+def limit_text_size(text, max_size:int=MAX_TEXT_SIZE):
+    """ Limits text size if it overpasses 'max_size' value. """
+    if len(text) > max_size:
+        text = text[:max_size-3] + "..."
+    return text
+
+
 def try_execute_req(func):
+    """" Tries to execute requests functions. """
     @ft.wraps(func)
     def wrap(*args, **kwargs):
         try:
@@ -48,14 +55,8 @@ def try_execute_req(func):
     return wrap
 
 
-def limit_text_size(text, max_size=MAX_TEXT_SIZE):
-    if len(text) > max_size:
-        text = text[:max_size-3] + "..."
-    return text
-
-
 @try_execute_req
-def req_post(url, data):
+def req_post(url, data:dict):
     return req.post(url, data=data)
 
 
@@ -71,26 +72,38 @@ def scrap_subjects(program_id:int):
 
     if success:
         try:
-            configm.update(subjects=response.json())
+            response = response.json()
         except req.exceptions.JSONDecodeError as exc:
             response, success = ("NoSubjects", exc), False
 
     return response, success
 
 
-def scrap_semester_start_end(semester_id):
+def scrap_semester_start_end(semester_id:int):
     response, success = req_post("https://nodarbibas.rtu.lv/getChousenSemesterStartEndDate", {
         "semesterId": semester_id,
     })
 
     if success:
         try:
-            data = response.json()
-            configm.update(semesterStart=data["startDate"], semesterEnd=data["endDate"])
+            response = response.json()
         except req.exceptions.JSONDecodeError as exc:
             response, success = ("NoSemesterDates", exc), False
 
     return response, success
+
+
+def scrap_semester_dates_and_subjects(program_id:int, semester_id:int):
+    """ Scraps program subjects and gets semester start and end dates. Returns both in tuple - (dates, subjects). """
+    dates_response, success = scrap_semester_start_end(semester_id)
+    if not success:
+        return dates_response, success
+    
+    subjects_response, success = scrap_subjects(program_id)
+    if not success:
+        return subjects_response, success
+    
+    return (dates_response, subjects_response), success
 
 
 def scrap_lectures(program_id:int, month:int, year:int):
@@ -99,42 +112,34 @@ def scrap_lectures(program_id:int, month:int, year:int):
         "year": year,
         "month": month
     })
-
+    
     if success:
-        lecture_dates = {"lastScrap": dt.datetime.now().strftime(DT_FORMAT)}
-        
         try:
-            for lecture in response.json():
-                date = str(dt.datetime.fromtimestamp(lecture["eventDate"] / 1e3).date())
-                if date not in lecture_dates:
-                    lecture_dates[date] = []
-                lecture_dates[date].append(lecture)
-
-            lecturesm.write(lecture_dates, month, year)
+            response = response.json()
         except req.exceptions.JSONDecodeError as exc:
             response, success = ("OutOfSemester", exc), False
     
     return response, success
 
 
-def scrap_multiple_lectures(program_id:int, dates:list):
+def scrap_and_save_lectures(program_id:int, month:int, year:int):
+    """ Scraps and saves lectures on device. """
+    response, success = scrap_lectures(program_id, month, year)
+    if success:
+        lecturesm.save_response(month, year, response, dt.datetime.now().strftime(DT_FORMAT))
+    return response, success
+
+
+def scrap_multiple_lectures(program_id:int, dates:[(int, int)]):
+    """ Scraps multiple lectures. 'dates' values - [(month, year), ...]. """
     responses = []
     for month, year in dates:
-        response, success = scrap_lectures(program_id, month, year)
-        responses.append({"month": month, "year": year, "response": response, "success": success})
+        response, success = scrap_and_save_lectures(program_id, month, year)
         if not success:
+            responses = response
             break
+        responses.append({"month": month, "year": year, "response": response})
     return responses, success
-
-
-class TxtWeb:
-    def __init__(self, _file:str):
-        with open(_file, "r", encoding="utf-8") as w:
-            self.data = w.read()
-
-    @property
-    def text(self):
-        return self.data
 
 
 class NORTUSApp(App):

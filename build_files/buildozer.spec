@@ -34,11 +34,11 @@ source.include_patterns = assets/*,images/*
 #source.exclude_patterns = license,images/*/*.jpg
 
 # (str) Application versioning (method 1)
-version = 1.0
+# version = 1.0.0
 
 # (str) Application versioning (method 2)
-# version.regex = __version__ = ['"](.*)['"]
-# version.filename = %(source.dir)s/main.py
+version.regex = __version__ = ['"](.*)['"]
+version.filename = %(source.dir)s/nortus/__init__.py
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
