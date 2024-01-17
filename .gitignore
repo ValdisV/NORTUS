@@ -1,5 +1,9 @@
 /.venv
 /saves
+
+/__pycache__
+/nortus/__pycache__
+
 /web.txt
 /config.json
 /test.py
