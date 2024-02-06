@@ -8,6 +8,7 @@ class ConfigManager:
 
     CONFIG_SAVE_NAME = "config.json"
     DEFAULT_DATA = {
+        "autoUpdate": True,
         "semesterProgramId": None,
         "semester": None,
         "course": None,

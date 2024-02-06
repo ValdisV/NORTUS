@@ -10,7 +10,7 @@ from .saves import ConfigManager, LectureSaveManager
 
 
 CREATED_BY = "ValdisV"
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 
 DATE_FORMAT = "%Y-%m-%d"
@@ -33,6 +33,13 @@ configm.read()
 lecturesm = LectureSaveManager()
 
 
+def print_format_exc(exception):
+    text = f" CONTROLLED ERROR - {type(exception).__name__} ".center(100, "-")
+    print(text)
+    print(tb.format_exc())
+    print(text)
+
+
 def limit_text_size(text, max_size:int=MAX_TEXT_SIZE):
     """ Limits text size if it overpasses 'max_size' value. """
     if len(text) > max_size:
@@ -50,7 +57,7 @@ def try_execute_req(func):
                 return (f"Invalid status code [{response.status_code}]", f"Got '{response.status_code}' status code!"), False
             return response, True
         except Exception as exc:
-            print(tb.format_exc())
+            print_format_exc(exc)
             return (type(exc).__name__, exc), False
     return wrap
 
@@ -112,7 +119,7 @@ def scrap_lectures(program_id:int, month:int, year:int):
         "year": year,
         "month": month
     })
-    
+
     if success:
         try:
             response = response.json()

@@ -114,6 +114,8 @@ class LectureScreen(Screen):
         super().__init__(**kwargs)
         
         self.enable_touch = True
+        self.auto_update_running = False
+        self.auto_update_enabled = configm.get("autoUpdate")
         self.street_addresses = set()
 
         # --- LAYOUTS ---
@@ -130,8 +132,8 @@ class LectureScreen(Screen):
 
         self.menu.add_btn_nr("----->", image="images/close.png")
         self.menu.add_empty_block()
-        self.menu.add_btn_nr("All saved months", self.show_all_month_menu, "images/save.png")
-        self.menu.add_btn_nr("Street addresses", self.show_street_address_menu, "images/street.png")
+        self.menu.add_btn_nr("Month saves", self.show_all_month_menu, "images/save.png")
+        self.menu.add_btn_nr("Addresses", self.show_street_address_menu, "images/street.png")
         self.menu.add_btn_nr("Shown lectures", self.show_hidden_lecture_menu, "images/list.png")
         self.menu.add_empty_block()
         self.menu.add_btn_nr("ORTUS", ft.partial(webbrowser.open, "https://ortus.rtu.lv"), "images/internet.png")
@@ -139,7 +141,7 @@ class LectureScreen(Screen):
         self.menu.add_btn_nr("Sports", ft.partial(webbrowser.open, "https://www.rtu.lv/lv/sports/sporta-nodarbibas/pieteikties-nodarbibam"), "images/internet.png")
         self.menu.add_empty_block()
         self.menu.add_btn_nr("Change course", self.screen_to_courses, "images/back-3.png")
-        self.menu.add_btn_nr("About", self.show_about_menu, "images/info.png")
+        self.menu.add_btn_nr("Info", self.show_about_menu, "images/info.png")
 
     def on_enter(self):
         self.auto_refresh_clock = Clock.schedule_once(self.full_refresh)
@@ -157,7 +159,7 @@ class LectureScreen(Screen):
                 self.enable_touch = False
 
     def show_calendar(self):
-        self.calendar_layout.show(self.date, self.semester_start_date, self.semester_end_date)
+        self.calendar_layout.show(self.date, self.semester_start, self.semester_end)
 
     def remove_old_clock(self):
         """ Removes old auto update clock """
@@ -187,10 +189,13 @@ class LectureScreen(Screen):
         """ If a month or year has changed, loads or scraps new date. """
         if self.date.month != old_month or self.date.year != old_year:
             lecturesm.load_month(self.date.month, self.date.year)
-            if not lecturesm.lectures:
-                self.scrap_lectures(reset_date_in_fail=reset_date_in_fail)
-            else:
+            if lecturesm.lectures:
+                self.check_for_updates = self.auto_update_enabled
                 self.read_last_scrap_date()
+            elif self.auto_update_running:  # goes back a day. if month hasn't been downloaded and auto update is running
+                self.change_day(1 if self.day_offset < 0 else -1)
+            else:
+                self.scrap_lectures(reset_date_in_fail=reset_date_in_fail)
 
     def show_lecture_list(self, _=None):
         self.lecture_list.opacity = 1
@@ -203,7 +208,7 @@ class LectureScreen(Screen):
     def free_day_box(self):
         """ Returns free day element box. """
         box = FreeDayBox()
-        if self.current_day:
+        if not self.day_offset:
             box.border_color = self.CURRENT_LECTURE_BD
         return box
     
@@ -211,13 +216,19 @@ class LectureScreen(Screen):
         """ Returns when loaded lectuers were updated. """
         scraped_time = (dt.datetime.now() - last_time).total_seconds()
         if scraped_time >= 2628000:
-            return f"{(scraped_time / 2628000)} months"
+            return round(scraped_time / 2628000), "months"
         elif scraped_time >= 86400:
-            return f"{round(scraped_time / 86400)} days"
+            return round(scraped_time / 86400), "days"
         elif scraped_time >= 3600:
-            return f"{round(scraped_time / 3600)} hours"
+            return round(scraped_time / 3600), "hours"
         else:
-            return f"{round(scraped_time / 60)} minutes"
+            return round(scraped_time / 60), "minutes"
+        
+    def disable_unnecessary_widgets(self, disable:bool):
+        """ Disables some features. Mostly used for auto update. """
+        self.ids.month_update_btn.disabled = disable
+        self.ids.menu_access_btn.disabled = disable
+        self.ids.day.disabled = disable
 
     # -------------------------------------------------------------------------------------------------
     # MENUS -------------------------------------------------------------------------------------------
@@ -225,7 +236,6 @@ class LectureScreen(Screen):
     def show_all_month_menu(self):
         """ Displays all saved months. Allows to update them. """
         def _exit():
-            self.refresh()
             self.menu.show()
             self.all_month_menu.clear_menu_widgets()
 
@@ -244,17 +254,31 @@ class LectureScreen(Screen):
             
         def update_one(instance):
             self.scrap_multiple_lectures([existing_saves[int(instance.id[1:])]], scrap_end)
+
+        def auto_update():
+            # TODO: if disabled then enables and after that updating one of the months, it will check for auto updates. (AUTO UPDATE CANT BE IN MENU)
+            auto_update = not configm.get("autoUpdate")
+            configm.update(autoUpdate=auto_update)
+            self.check_for_updates = auto_update
+            self.auto_update_enabled = auto_update
+            enable_disable_auto_update(auto_update)
+
+        def enable_disable_auto_update(enable):
+            auto_update_btn.opacity = 1 if enable else self.HIDDEN_SUBJECT_OPACITY
             
         self.all_month_menu.add_btn_nr("----->", _exit, "images/close.png")
+        auto_update_btn = self.all_month_menu.add_btn_nr("Auto update after 12 hours", auto_update, image="images/refresh-2.png", auto_hide=False)
         self.all_month_menu.add_btn_nr("Update all", update, "images/refresh.png")
         download_btn = self.all_month_menu.add_btn_nr("Download missing", scrap_missing, "images/download.png")
         self.all_month_menu.add_empty_block()
         self.all_month_menu.add_empty_block()
+
+        enable_disable_auto_update(configm.get("autoUpdate"))
         
         missing_saves, existing_saves = [], []
-        month, year = self.semester_start_date.month, self.semester_start_date.year
+        month, year = self.semester_start.month, self.semester_start.year
         save_files = os.listdir(lecturesm.PATH)
-        total_saves = abs((self.semester_start_date.year - self.semester_end_date.year) * 12 + self.semester_start_date.month - self.semester_end_date.month) + 1
+        total_saves = abs((self.semester_start.year - self.semester_end.year) * 12 + self.semester_start.month - self.semester_end.month) + 1
 
         # Adding months to menu
         for _ in range(total_saves):
@@ -267,8 +291,9 @@ class LectureScreen(Screen):
             else:  # if downloaded
                 file_data = lecturesm.read(month, year)
                 last_update = dt.datetime.strptime(file_data['lastScrap'], DT_FORMAT)
+                last_update_data = self.get_last_update_text(last_update)
 
-                btn = self.all_month_menu.add_btn(f"{month_text}.{year}\n(Updated ~{self.get_last_update_text(last_update)} ago)", update_one, "images/small-refresh-2.png")
+                btn = self.all_month_menu.add_btn(f"{month_text}.{year}\n(Updated ~{last_update_data[0]} {last_update_data[1]} ago)", update_one, "images/small-refresh-2.png")
                 btn.id = f"e{len(existing_saves)}"
                 existing_saves.append((month, year))
 
@@ -352,9 +377,9 @@ class LectureScreen(Screen):
 
         self.about_menu.add_btn_nr("----->", _exit, "images/close.png")
         self.about_menu.add_empty_block()
-        self.about_menu.add_label(f"{configm.get('semester')}")
-        self.about_menu.add_label(f"{configm.get('course')}")
-        self.about_menu.add_label(f"{configm.get('program')}")
+        self.about_menu.add_label(configm.get('semester'))
+        self.about_menu.add_label(configm.get('course'))
+        self.about_menu.add_label(configm.get('program'))
         self.about_menu.add_label(f"Course: {configm.get('courseNum')}  |  Group: {configm.get('groupNum')}")
         self.about_menu.add_empty_block()
         secrete_btn = self.about_menu.add_btn_nr(f"|  App created by: {CREATED_BY}  |", ft.partial(webbrowser.open, "https://www.yout-ube.com/watch?v=j1ArKz8knAU"), auto_hide=False)
@@ -370,59 +395,51 @@ class LectureScreen(Screen):
     def refresh(self, _=None):
         """ Updates displayed data. """
 
-        self.lecture_list.opacity = 0
         self.remove_old_clock()
-        self.lecture_list.clear_widgets()
         self.street_addresses.clear()
-
-        # Updating update text
-        if self.last_scrap is not None:
-            after_input = self.get_last_update_text(self.last_scrap)
-        else:
-            after_input = "NEVER"
-        self.ids.last_update.text = f"Updated ~{after_input} ago"
-
+        
         # Updating showed date
         day_name = dt.datetime.strftime(self.date, '%A')
         self.day.text = f"{self.date.strftime('%d.%m')} - {DAYS.get(day_name)}"
-        
-        self.current_day = not self.day_offset
-        lectures = lecturesm.get(str(self.date))
 
-        self.ids.prev_day.disabled = (self.date - self.semester_start_date).days - (2 * (day_name == "Monday")) <= 0
-        self.ids.next_day.disabled = (self.semester_end_date - self.date).days - (2 * (day_name == "Friday")) <= 0
+        self.ids.home_btn.disabled = not self.day_offset
+        self.ids.prev_day.disabled = (self.date - self.semester_start).days - (2 * (day_name == "Monday")) <= 0
+        self.ids.next_day.disabled = (self.semester_end - self.date).days - (2 * (day_name == "Friday")) <= 0
+        
+        time_now = dt.datetime.now()
+        self.lecture_list.opacity = refresh_after = 0
+        lectures = lecturesm.get(str(self.date))
+        self.lecture_list.clear_widgets()
 
         if not lectures:
             self.lecture_list.add_widget(self.free_day_box())
         else:
-            prev_start_time = prev_end_time = refresh_after = 0
-            hidden_lectures = []
-            hidden_subjects = configm.get("hiddenSubjects")
-
-            time_now = dt.datetime.now()
-            
-            time_now_time = time_now.hour * 60 + time_now.minute
-
+            prev_start_time = prev_end_time = 0
+            hidden_lectures, hidden_subjects = [], configm.get("hiddenSubjects")
             is_offseted_day = self.day_offset or self.offset_day
+
+            time_now_time = time_now.hour * 60 + time_now.minute
             
-            for lecture in lectures:  
+            for lecture in lectures:
                 lec_box = LectureElement()
-                self.street_addresses.add(lecture["room"]["roomName"])
 
                 # converting to minutes
                 start, end = lecture["customStart"], lecture["customEnd"]
                 start_time, end_time = start['hour'] * 60 + start['minute'], end['hour'] * 60 + end['minute']
 
+                # filling lectures data
                 lec_box.name.text = lecture["eventTempName"]
                 lec_box.room.text = lecture["roomInfoText"]
                 lec_box.time.text = f"{start['hour']}:{str(start['minute']).rjust(2, '0')} - {end['hour']}:{str(end['minute']).rjust(2, '0')}"
 
+                # if lecture is hidden
                 if any(lecture["eventTempName"].find(sub) != -1 for sub in hidden_subjects):
                     lec_box.opacity = 0.3
                     hidden_lectures.append(lec_box)
                     continue
-                
-                if not is_offseted_day:  # only if current day is selected
+
+                # only if current day is selected
+                if not is_offseted_day:
                     if start_time <= time_now_time < end_time:
                         lec_box.border_color = self.CURRENT_LECTURE_BD
                         refresh_after = end_time - time_now_time
@@ -432,8 +449,10 @@ class LectureScreen(Screen):
                         prev_start_time = start_time
                     prev_end_time = end_time
 
+                self.street_addresses.add(lecture["room"]["roomName"])  # add's address to address menu
                 self.lecture_list.add_widget(lec_box)
             
+            # adds hidden lecture dropdown button
             if hidden_lectures:
                 total_hidden = len(hidden_lectures)
                 if len(lectures) == total_hidden:
@@ -445,40 +464,54 @@ class LectureScreen(Screen):
 
                 self.lecture_list.add_widget(message_box)
 
+        # Updating update text and auto update
+        last_upd_num, last_upd_text = (0, "NEVER") if self.last_scrap is None else self.get_last_update_text(self.last_scrap)
+
+        if self.check_for_updates and not self.auto_update_running:
+            self.check_for_updates = False
+            if ((last_upd_text == "hours" and last_upd_num >= 12) or last_upd_text in ("days", "months")):
+                self.scrap_lectures_in_bg()
+
+        self.ids.last_update.text = "Updating! Please wait..." if self.auto_update_running else f"Updated ~{last_upd_num} {last_upd_text} ago"
+
+        # auto refresh after specific time
+        if not self.auto_update_running:
             if refresh_after:  # current lectures start/end
                 self.auto_refresh_clock = Clock.schedule_once(self.refresh, refresh_after * 60 - time_now.second + 1)
             else:  # when day ends
                 self.auto_refresh_clock = Clock.schedule_once(self.full_refresh, 86401 - ((time_now.hour*3600) + (time_now.minute*60) + time_now.second))
         Clock.schedule_once(self.show_lecture_list)
 
-    def full_refresh(self, _):
+    def full_refresh(self, _=None):
         """ Updates and gets all necessary values. """
 
         if not configm.get("semesterProgramId"):
             self.screen_to_courses()
             return
         
-        self.semester_start_date = dt.datetime.fromtimestamp(configm.get("semesterStart") / 1e3).date()
-        self.semester_end_date = dt.datetime.fromtimestamp(configm.get("semesterEnd") / 1e3).date()
+        self.semester_start = dt.datetime.fromtimestamp(configm.get("semesterStart") / 1e3).date()
+        self.semester_end = dt.datetime.fromtimestamp(configm.get("semesterEnd") / 1e3).date()
         
-        self.day_offset = 0
+        self.check_for_updates = self.auto_update_enabled
         self.date = dt.datetime.now().date()
+        self.date_copy = self.date
         
         # if the semester has ended or hasn't started yet
-        if self.semester_start_date > self.date:
-            self.date = self.semester_start_date
-        elif self.semester_end_date < self.date:
-            self.date = self.semester_end_date
-        
-        # if free day (Sunday or Saturday)
-        self.offset_day = dt.datetime.strftime(self.date, '%A') in ("Sunday", "Saturday")
+        if self.semester_start > self.date:
+            self.date = self.semester_start
+        elif self.semester_end < self.date:
+            self.date = self.semester_end
+
+        self.skip_if_free_day(1)
+        self.day_offset = 0
+        self.offset_day = self.date != self.date_copy
+
+        if self.offset_day:  # setting date as default (home)
+            self.date_copy = self.date
 
         # Updating upper text
         self.ids.program.text = f"{configm.get('program')} [{configm.get('courseNum')}/{configm.get('groupNum')}]"
         self.ids.semester.text = configm.get("semester")
-
-        self.skip_if_free_day(1)
-        self.date_copy = self.date
 
         lecturesm.load_month(self.date.month, self.date.year)
         
@@ -491,33 +524,43 @@ class LectureScreen(Screen):
     # -------------------------------------------------------------------------------------------------
     # SCRAPING ----------------------------------------------------------------------------------------
     # -------------------------------------------------------------------------------------------------
-    def scrap_lectures(self, _=None, reset_date_in_fail:bool=False, end_func=lambda *_: None):
+    def scrap_lectures(self, _=None, fail_date_change=True, reset_date_in_fail:bool=False, end_func=lambda *_: None, show_layout=True):
         def completed(respone, success:bool, _):
             if success:
                 lecturesm.load_month(self.date.month, self.date.year)
-                self.last_scrap = dt.datetime.strptime(lecturesm.get("lastScrap"), DT_FORMAT)
-                self.refresh()
-            else:
-                if respone[0] == "OutOfSemester":
-                    if reset_date_in_fail:
-                        self.reset_date()
-                    elif self.day_offset > 0:
-                        self.change_day(-1)
-                    elif self.day_offset < 0:
-                        self.change_day(1)
+                self.read_last_scrap_date()
+                if show_layout:
+                    self.refresh()
+            elif fail_date_change:
+                if reset_date_in_fail:
+                    self.reset_date()
+                elif self.day_offset > 0:
+                    self.change_day(-1)
+                elif self.day_offset < 0:
+                    self.change_day(1)
             end_func(respone, success)
 
-        self.loading_layout.wait_req_post(completed, scrap_and_save_lectures, configm.get("semesterProgramId"), self.date.month, self.date.year)
+        self.loading_layout.wait_req_post(completed, scrap_and_save_lectures, (configm.get("semesterProgramId"), self.date.month, self.date.year), show=show_layout)
+
+    def scrap_lectures_in_bg(self, reset_date_in_fail:bool=False, end_func=lambda *_: None):
+        def completed(respone, success:bool, _=None):
+            self.disable_unnecessary_widgets(False)
+            self.auto_update_running = False
+            self.refresh()
+
+        self.auto_update_running = True
+        self.disable_unnecessary_widgets(True)
+        self.scrap_lectures(end_func=completed, show_layout=False)
 
     def scrap_multiple_lectures(self, dates:[(int, int)], end_func=lambda *_: None):
-        def completed(responses, success:bool, _):
+        def completed(responses, success:bool, _=None):
             if success:
                 lecturesm.load_month(self.date.month, self.date.year)
                 self.read_last_scrap_date()
                 self.refresh()
             end_func(responses, success)
 
-        self.loading_layout.wait_req_post(completed, scrap_multiple_lectures, configm.get("semesterProgramId"), dates)
+        self.loading_layout.wait_req_post(completed, scrap_multiple_lectures, (configm.get("semesterProgramId"), dates))
 
     def scrap_subjects(self, end_func=lambda *_: None):
         def completed(response, success, _):
@@ -525,7 +568,7 @@ class LectureScreen(Screen):
                 configm.update(subjects=response)
             end_func(response, success)
 
-        self.loading_layout.wait_req_post(completed, scrap_subjects, configm.get("semesterProgramId"))
+        self.loading_layout.wait_req_post(completed, scrap_subjects, (configm.get("semesterProgramId"),))
 
     # -------------------------------------------------------------------------------------------------
     # DATE CHANGE -------------------------------------------------------------------------------------
@@ -617,7 +660,7 @@ class CourseSelectScreen(Screen):
             self.ids.courses_spin.values = self.courses_short_names
 
         self.clear_values()
-        self.loading_layout.wait_req_post(completed, req_get, "https://nodarbibas.rtu.lv/")
+        self.loading_layout.wait_req_post(completed, req_get, ("https://nodarbibas.rtu.lv/",))
 
     # -------------------------------------------------------------------------------------------------
     # SELECTION ---------------------------------------------------------------------------------------
@@ -656,7 +699,7 @@ class CourseSelectScreen(Screen):
             "semesterId": self.semesters.find("option", string=self.semester).get("value"),
             "programId": self.courses.find("option", string=self.program).get("value")
         }
-        self.loading_layout.wait_req_post(completed, url="https://nodarbibas.rtu.lv/findCourseByProgramId", data=self.course_request)
+        self.loading_layout.wait_req_post(completed, req_post, kwargs={"url": "https://nodarbibas.rtu.lv/findCourseByProgramId", "data": self.course_request})
 
     def selected_course_num(self, selected:str):
         if not selected:
@@ -673,7 +716,7 @@ class CourseSelectScreen(Screen):
             self.ids.group_spin.text = ""
 
         self.course_num = selected
-        self.loading_layout.wait_req_post(completed, url="https://nodarbibas.rtu.lv/findGroupByCourseId", data=self.course_request | {"courseId": self.course_num})
+        self.loading_layout.wait_req_post(completed, req_post, kwargs={"url": "https://nodarbibas.rtu.lv/findGroupByCourseId", "data": self.course_request | {"courseId": self.course_num}})
         
     def selected_group(self, selected:str):
         if not selected: return
@@ -700,7 +743,7 @@ class CourseSelectScreen(Screen):
 
         program_id = self.groups_by_group[self.group]["semesterProgramId"]
         semester_id = self.semesters.find("option", string=self.semester).get("value")
-        self.loading_layout.wait_req_post(completed, scrap_semester_dates_and_subjects, program_id, semester_id)
+        self.loading_layout.wait_req_post(completed, scrap_semester_dates_and_subjects, (program_id, semester_id))
 
 
 # -------------------------------------------------------------------------------------------------
@@ -782,26 +825,36 @@ class MenuLayout(TransparentBaseLayout):
 class LoadingLayout(TransparentBaseLayout):
     def __init__(self, master:Screen, **kw):
         super().__init__(**kw)
+        self.running_thread = td.Event()
+        self.showing_layout = False
         self.master = master
 
     def show(self, info_text:str):
-        self.disable_widgets(True)
+        if self.showing_layout: return
+        self.showing_layout = True
         self.info.text = info_text
+        self.disable_widgets(True)
         self.master.add_widget(self)
 
     def hide(self, _=None):
         self.master.remove_widget(self)
         self.disable_widgets(False)
+        self.showing_layout = False
 
-    def wait_req_post(self, end_func, req_func=req_post, *args, **kwargs):
+    def wait_req_post(self, end_func, req_func, args=(), kwargs={}, show=True):
         """ Waits until 'req_func' has been executed. Functon is intended for request posts. Must return - (response, success) """
         def run():
             response, success = req_func(*args, **kwargs)
-            if success:
+            if not show:
+                Clock.schedule_once(ft.partial(end_func, response, success))
+                self.running_thread.clear()
+            elif success:
                 Clock.schedule_once(self.hide)
+                Clock.schedule_once(ft.partial(end_func, response, success))
+                self.running_thread.clear()
             else:
                 Clock.schedule_once(ft.partial(cancel, response[0]))
-            Clock.schedule_once(ft.partial(end_func, response, success))
+                Clock.schedule_once(ft.partial(end_func, response, success), 2)
 
         def cancel(response, _=None):
             match response:
@@ -811,9 +864,18 @@ class LoadingLayout(TransparentBaseLayout):
                     self.info.text = f"Out of semester!"
                 case _:
                     self.info.text = f"FAILED!\n{response}"
-            Clock.schedule_once(self.hide, 2)
+            Clock.schedule_once(lambda _: (self.hide(), self.running_thread.clear()), 2)
 
-        self.show("Please wait...")
+        if self.running_thread.is_set():
+            if show:
+                self.show("")
+                cancel("MultiplePosts")
+            return end_func(("MultiplePosts", "Can't run multiple posts!"), False)
+
+        if show:
+            self.show("Please wait...")
+
+        self.running_thread.set()
         thread = td.Thread(target=run)
         thread.start()
 
@@ -834,6 +896,7 @@ class LoadingLayout(TransparentBaseLayout):
 
 
 class CalendarLayout(TransparentBaseLayout):
+
     ONE_DAY_TD = dt.timedelta(days=1)
     FREE_DAY_COLOR = [112/255, 14/255, 0, 1]
     CURRENT_DAY_COLOR = [0/255, 84/255, 81/255, 1]
@@ -919,7 +982,7 @@ class CalendarLayout(TransparentBaseLayout):
             self.lectures = lecturesm.read(self.date.month, self.date.year)
             self.fill_calendar()
 
-        self.loading_layout.wait_req_post(completed, scrap_and_save_lectures, configm.get("semesterProgramId"), self.date.month, self.date.year)
+        self.loading_layout.wait_req_post(completed, scrap_and_save_lectures, (configm.get("semesterProgramId"), self.date.month, self.date.year))
 
     def load_month(self):
         file_path = lecturesm.get_file_path(self.date.month, self.date.year)

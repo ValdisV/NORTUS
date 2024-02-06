@@ -316,6 +316,7 @@ WindowManager:
                         opacity: 0.8
 
                 MenuButton:
+                    id: menu_access_btn
                     opacity: 0.8
                     canvas.before:
                         Color:
@@ -374,8 +375,8 @@ WindowManager:
                                 root.show_calendar()
 
                         RoundedBoxButton:
-                            opacity: 0.2 if root.current_day else 0.7
-                            disabled: root.current_day
+                            opacity: 0.2 if self.disabled else 0.7
+                            id: home_btn
                             canvas.before:
                                 Color:
                                     rgb: (1,1,1)
@@ -442,6 +443,7 @@ WindowManager:
 
                 MenuButton:
                     opacity: 0.7
+                    id: month_update_btn
                     canvas.before:
                         Color:
                             rgb: (1,1,1)
@@ -449,7 +451,7 @@ WindowManager:
                             source: "images/refresh-2.png"
                             size: self.width, self.height
                             pos: self.pos
-                    on_release: root.scrap_lectures()
+                    on_release: root.scrap_lectures(fail_date_change=False)
 
 <CourseSelectScreen>:
     name: "courses"
